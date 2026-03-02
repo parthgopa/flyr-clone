@@ -1,0 +1,39 @@
+from flask import Flask, send_from_directory
+from flask_cors import CORS
+from routes.generate import generate_bp
+from routes.auth import auth_bp
+from routes.video import video_bp
+from routes.admin import admin_bp
+from routes.admin_content import admin_content_bp
+from routes.user import user_bp
+from routes.content import content_bp
+import os
+
+app = Flask(__name__)
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=True
+)
+
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  
+
+
+app.register_blueprint(generate_bp, url_prefix="/generate")
+app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(video_bp, url_prefix="/video")
+app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(user_bp, url_prefix="/user")
+app.register_blueprint(content_bp, url_prefix="/content")
+app.register_blueprint(admin_content_bp, url_prefix="/admin/content")
+
+@app.route("/uploads/<path:filename>")
+def serve_image(filename):
+    return send_from_directory("uploads", filename)
+
+@app.route("/")
+def health():
+    return {"status": "Gemini image backend running"}
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000, debug=True)

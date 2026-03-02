@@ -21,10 +21,25 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.flyrclone"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "updates": {
+      "enabled": false
+    },
+    "plugins": [
+      "expo-asset",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow flyr-clone to access your photos to save generated designs.",
+          "savePhotosPermission": "Allow flyr-clone to save images to your gallery.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ]
   }
 }

@@ -6,12 +6,14 @@ import {
     Animated,
     Dimensions,
     Pressable,
+    ActivityIndicator,
 } from "react-native";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import AppText from "./ui/AppText";
 import { theme } from "../theme/theme";
 import { useAuth } from "../context/AuthContext";
+import { getUserCredits } from "../services/api";
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.75;
 
@@ -25,6 +27,8 @@ export default function SidebarDrawer({ visible, onClose, onNavigate }: SidebarD
     const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { user, logout } = useAuth();
+    const [credits, setCredits] = useState<number | null>(null);
+    const [loadingCredits, setLoadingCredits] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -32,6 +36,9 @@ export default function SidebarDrawer({ visible, onClose, onNavigate }: SidebarD
                 Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
                 Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
             ]).start();
+            
+            // Load credits when drawer opens
+            loadCredits();
         } else {
             Animated.parallel([
                 Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
@@ -39,6 +46,20 @@ export default function SidebarDrawer({ visible, onClose, onNavigate }: SidebarD
             ]).start();
         }
     }, [visible]);
+
+    const loadCredits = async () => {
+        try {
+            setLoadingCredits(true);
+            const response = await getUserCredits();
+            if (response.success) {
+                setCredits(response.credits);
+            }
+        } catch (error) {
+            console.error("Error loading credits:", error);
+        } finally {
+            setLoadingCredits(false);
+        }
+    };
 
     const handleNav = (screen: string) => {
         onClose();
@@ -65,6 +86,33 @@ export default function SidebarDrawer({ visible, onClose, onNavigate }: SidebarD
                     </View>
                     <AppText style={styles.userName} numberOfLines={1}>{user?.name ?? "User"}</AppText>
                     <AppText style={styles.userEmail} numberOfLines={1}>{user?.email ?? ""}</AppText>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* Credits Card */}
+                <View style={styles.creditsCard}>
+                    <View style={styles.creditsHeader}>
+                        <View style={styles.creditsIconContainer}>
+                            <Ionicons name="images" size={20} color={theme.colors.accent} />
+                        </View>
+                        <View style={styles.creditsInfo}>
+                            <AppText style={styles.creditsLabel}>Images Left</AppText>
+                            {loadingCredits ? (
+                                <ActivityIndicator size="small" color={theme.colors.accent} />
+                            ) : (
+                                <AppText style={styles.creditsValue}>{credits ?? 0}</AppText>
+                            )}
+                        </View>
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.buyMoreButton}
+                        onPress={() => handleNav("BuyMoreImages")}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
+                        <AppText style={styles.buyMoreText}>Buy More</AppText>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.divider} />
@@ -176,6 +224,61 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: theme.colors.border,
         marginHorizontal: theme.spacing.md,
+    },
+
+    creditsCard: {
+        marginHorizontal: theme.spacing.md,
+        marginVertical: theme.spacing.md,
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+    },
+    creditsHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: theme.spacing.sm,
+    },
+    creditsIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: `${theme.colors.accent}15`,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: theme.spacing.sm,
+    },
+    creditsInfo: {
+        flex: 1,
+    },
+    creditsLabel: {
+        ...theme.typography.caption,
+        color: theme.colors.secondary,
+        fontSize: 11,
+        marginBottom: 2,
+    },
+    creditsValue: {
+        ...theme.typography.hero,
+        fontSize: 24,
+        color: theme.colors.accent,
+        fontWeight: "700",
+    },
+    buyMoreButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: `${theme.colors.accent}10`,
+        paddingVertical: 8,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.radius.md,
+        gap: 6,
+    },
+    buyMoreText: {
+        ...theme.typography.bodyMedium,
+        color: theme.colors.accent,
+        fontWeight: "600",
+        fontSize: 13,
     },
 
     menuSection: {

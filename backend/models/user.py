@@ -34,11 +34,14 @@ class User:
             "role": role,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
-            # Subscription-ready fields (for future use)
+            # Credits system for pay-per-use model
+            "credits": 12,  # Default credits on signup
+            "plan": "free",  # free, basic, premium
+            # Legacy subscription fields (deprecated, use credits instead)
             "subscription": {
-                "plan": "free",  # free, basic, premium
-                "credits_remaining": 0,  # For pay-per-use model
-                "credits_total": 0,
+                "plan": "free",
+                "credits_remaining": 12,
+                "credits_total": 12,
                 "subscription_start": None,
                 "subscription_end": None,
                 "auto_renew": False
@@ -115,3 +118,90 @@ class User:
         exists = users_col.count_documents({"email": email.lower()}) > 0
         print(f"User exists check for {email}: {exists}")
         return exists
+    
+    @staticmethod
+    def get_credits(user_id: str) -> int:
+        """Get user's current credit balance"""
+        try:
+            user = users_col.find_one({"_id": ObjectId(user_id)}, {"credits": 1})
+            if user:
+                return user.get("credits", 0)
+            return 0
+        except Exception as e:
+            print(f"Error getting credits for user {user_id}: {e}")
+            return 0
+    
+    @staticmethod
+    def add_credits(user_id: str, credits: int, reason: str = "purchase") -> bool:
+        """
+        Add credits to user's account
+        
+        Args:
+            user_id: User's MongoDB ObjectId
+            credits: Number of credits to add
+            reason: Reason for adding credits (purchase, refund, bonus, etc.)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            result = users_col.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$inc": {"credits": credits},
+                    "$set": {"updated_at": datetime.utcnow()}
+                }
+            )
+            print(f"✓ Added {credits} credits to user {user_id} (Reason: {reason})")
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error adding credits to user {user_id}: {e}")
+            return False
+    
+    @staticmethod
+    def deduct_credits(user_id: str, credits: int = 1, reason: str = "image_generation") -> dict:
+        """
+        Deduct credits from user's account
+        
+        Args:
+            user_id: User's MongoDB ObjectId
+            credits: Number of credits to deduct (default: 1)
+            reason: Reason for deducting credits
+        
+        Returns:
+            dict: {"success": bool, "remaining_credits": int, "message": str}
+        """
+        try:
+            user = users_col.find_one({"_id": ObjectId(user_id)}, {"credits": 1})
+            
+            if not user:
+                return {"success": False, "remaining_credits": 0, "message": "User not found"}
+            
+            current_credits = user.get("credits", 0)
+            
+            if current_credits < credits:
+                return {
+                    "success": False,
+                    "remaining_credits": current_credits,
+                    "message": f"Insufficient credits. You have {current_credits} credits but need {credits}"
+                }
+            
+            result = users_col.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$inc": {"credits": -credits},
+                    "$set": {"updated_at": datetime.utcnow()}
+                }
+            )
+            
+            new_credits = current_credits - credits
+            print(f"✓ Deducted {credits} credits from user {user_id} (Reason: {reason}, Remaining: {new_credits})")
+            
+            return {
+                "success": True,
+                "remaining_credits": new_credits,
+                "message": f"Successfully deducted {credits} credits"
+            }
+        except Exception as e:
+            print(f"Error deducting credits from user {user_id}: {e}")
+            return {"success": False, "remaining_credits": 0, "message": str(e)}

@@ -32,6 +32,7 @@ import ComingSoonAdsScreen from "../screens/ads/ComingSoonAdsScreen";
 // User screens
 import UserHistoryScreen from "../screens/UserHistoryScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
+import BuyMoreImagesScreen from "../screens/BuyMoreImagesScreen";
 import AdsPromptScreen from "../screens/ads/AdsPromptScreen";
 import AdsGenerationScreen from "../screens/ads/AdsGenerationScreen";
 import AdsResultScreen from "../screens/ads/AdsResultScreen";
@@ -112,6 +113,7 @@ export default function AppNavigator() {
           {/* User Profile & History */}
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
           <Stack.Screen name="UserHistory" component={UserHistoryScreen} />
+          <Stack.Screen name="BuyMoreImages" component={BuyMoreImagesScreen} />
         </>
       )}
     </Stack.Navigator>

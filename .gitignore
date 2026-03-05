@@ -42,3 +42,4 @@ yarn-error.*
 
 uploads/
 .env
+flyr-service-account.json

@@ -7,6 +7,7 @@ from routes.admin import admin_bp
 from routes.admin_content import admin_content_bp
 from routes.user import user_bp
 from routes.content import content_bp
+from routes.purchase import purchase_bp
 import os
 
 app = Flask(__name__)
@@ -26,6 +27,7 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(user_bp, url_prefix="/user")
 app.register_blueprint(content_bp, url_prefix="/content")
 app.register_blueprint(admin_content_bp, url_prefix="/admin/content")
+app.register_blueprint(purchase_bp, url_prefix="/purchase")
 
 @app.route("/uploads/<path:filename>")
 def serve_image(filename):

@@ -1,7 +1,10 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const backendURL = 'http://10.191.230.22:5000';
+// export const backendURL = 'http://192.168.31.55:5000';
+export const backendURL = 'https://0ad2-103-241-226-107.ngrok-free.app';
+
+
 console.log("backendURL", backendURL);
 
 /**
@@ -117,5 +120,118 @@ export async function pollJobStatus(jobId: string) {
     currentScenario: string | null;
     images: { scenarioId: string; label: string; imageUrl: string }[];
     errors: { scenarioId: string; label: string; error: string }[];
+  };
+}
+
+/**
+ * Get user's current credit balance
+ */
+export async function getUserCredits() {
+  const token = await getAuthToken();
+  const response = await axios.get(
+    `${backendURL}/purchase/credits`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data as {
+    success: boolean;
+    credits: number;
+  };
+}
+
+/**
+ * Verify purchase with backend after Google Play purchase
+ */
+export const verifyPurchase = async (purchaseData: {
+  productId: string;
+  purchaseToken: string;
+  packageName: string;
+}) => {
+  console.log('\n' + '='.repeat(60));
+  console.log('📤 SENDING PURCHASE VERIFICATION TO BACKEND');
+  console.log('='.repeat(60));
+  console.log('🏷️  Product ID:', purchaseData.productId);
+  console.log('🎫 Purchase Token:', purchaseData.purchaseToken.substring(0, 50) + '...');
+  console.log('📱 Package Name:', purchaseData.packageName);
+  console.log('🌐 Backend URL:', `${backendURL}/purchase/verify`);
+  
+  try {
+    const token = await getAuthToken();
+    const response = await axios.post(
+      `${backendURL}/purchase/verify`,
+      purchaseData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    console.log('\n📥 BACKEND RESPONSE:');
+    console.log('   Success:', response.data.success);
+    console.log('   Message:', response.data.message);
+    if (response.data.credits_added) {
+      console.log('   Credits Added:', response.data.credits_added);
+      console.log('   Total Credits:', response.data.total_credits);
+    }
+    if (response.data.error) {
+      console.log('   Error:', response.data.error);
+    }
+    console.log('='.repeat(60) + '\n');
+    
+    return response.data;
+  } catch (error: any) {
+    console.log('\n❌ VERIFICATION REQUEST FAILED:');
+    console.log('   Error:', error.message);
+    console.log('   Stack:', error.stack);
+    console.log('='.repeat(60) + '\n');
+    throw error;
+  }
+};
+
+/**
+ * Get available product packages
+ */
+export async function getProducts() {
+  const response = await axios.get(`${backendURL}/purchase/products`);
+  return response.data as {
+    success: boolean;
+    products: Array<{
+      id: string;
+      credits: number;
+      price: number;
+      currency: string;
+      price_display: string;
+    }>;
+    cost_per_image: number;
+  };
+}
+
+/**
+ * Get user's transaction history
+ */
+export async function getTransactions(limit: number = 50) {
+  const token = await getAuthToken();
+  const response = await axios.get(
+    `${backendURL}/purchase/transactions?limit=${limit}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data as {
+    success: boolean;
+    transactions: Array<{
+      _id: string;
+      product_id: string;
+      credits: number;
+      amount: number;
+      status: string;
+      created_at: string;
+    }>;
   };
 }

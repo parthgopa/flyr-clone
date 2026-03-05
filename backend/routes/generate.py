@@ -217,6 +217,28 @@ def generate_image_route():
         return jsonify({"error": "Model image required"}), 400
 
     scenarios = get_scenarios(category_id)
+    
+    # Check if user has enough credits
+    credits_needed = len(scenarios)
+    from models.user import User
+    current_credits = User.get_credits(user_id)
+    
+    if current_credits < credits_needed:
+        return jsonify({
+            "error": "insufficient_credits",
+            "message": f"You need {credits_needed} credits but have only {current_credits}",
+            "credits_needed": credits_needed,
+            "current_credits": current_credits
+        }), 402  # 402 Payment Required
+
+    # Deduct credits upfront
+    deduction_result = User.deduct_credits(user_id, credits_needed, reason="image_generation_shoot")
+    if not deduction_result["success"]:
+        return jsonify({
+            "error": "credit_deduction_failed",
+            "message": deduction_result["message"]
+        }), 400
+    
     job_id = str(uuid.uuid4())[:8]
 
     # Create job entry
@@ -373,9 +395,31 @@ def generate_catalogue_route():
     if not model_images or len(model_images) == 0:
         return jsonify({"error": "At least one model image required"}), 400
 
-    # Create scenarios from model labels
-    scenarios = [{"id": f"catalogue_{i}", "label": label} for i, label in enumerate(model_labels)]
+    # Check if user has enough credits
+    credits_needed = len(model_images)
+    from models.user import User
+    current_credits = User.get_credits(user_id)
+    
+    if current_credits < credits_needed:
+        return jsonify({
+            "error": "insufficient_credits",
+            "message": f"You need {credits_needed} credits but have only {current_credits}",
+            "credits_needed": credits_needed,
+            "current_credits": current_credits
+        }), 402  # 402 Payment Required
+
+    # Deduct credits upfront
+    deduction_result = User.deduct_credits(user_id, credits_needed, reason="image_generation_catalogue")
+    if not deduction_result["success"]:
+        return jsonify({
+            "error": "credit_deduction_failed",
+            "message": deduction_result["message"]
+        }), 400
+
     job_id = str(uuid.uuid4())[:8]
+    
+    # Create scenarios list for catalogue
+    scenarios = [{"id": f"catalogue_{i}", "label": label} for i, label in enumerate(model_labels)]
 
     # Create job entry
     jobs[job_id] = {
@@ -390,6 +434,7 @@ def generate_catalogue_route():
     }
 
     print(f"[Job {job_id}] Started catalogue: {len(model_images)} image(s) for '{category_id}' (User: {user_id})")
+    print(f"[Job {job_id}] Deducted {credits_needed} credits, remaining: {deduction_result['remaining_credits']}")
 
     # Spawn background thread
     thread = threading.Thread(

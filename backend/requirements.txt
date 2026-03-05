@@ -4,3 +4,5 @@ gunicorn
 pymongo
 python-dotenv
 google-genai
+google-api-python-client
+google-auth

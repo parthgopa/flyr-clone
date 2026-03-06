@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   },
   imageSlide: {
     width: SCREEN_WIDTH,
-    height: IMAGE_HEIGHT,
+    height: 350,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",

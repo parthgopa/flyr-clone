@@ -362,8 +362,22 @@ export const setupPurchaseListener = (
   const purchaseErrorSubscription = RNIap.purchaseErrorListener(
     (error) => {
       console.log('\n❌ PURCHASE ERROR FROM GOOGLE PLAY');
-      console.log('Error:', error);
+      console.log('Error Code:', error.code);
+      console.log('Error Message:', error.message);
       console.log('='.repeat(60) + '\n');
+      
+      // Reject all pending purchases with this error
+      // This ensures the purchaseProduct() promise rejects properly
+      pendingPurchases.forEach((pending, productId) => {
+        console.log(`Rejecting pending purchase for ${productId}`);
+        pending.reject({
+          success: false,
+          message: error.message || 'Purchase failed',
+          code: error.code,
+        });
+      });
+      pendingPurchases.clear();
+      
       onPurchaseError(error);
     }
   );

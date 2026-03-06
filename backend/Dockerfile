@@ -28,11 +28,11 @@ COPY . .
 RUN mkdir -p uploads
 
 # Expose port
-EXPOSE 5000
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/')" || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:8000/')" || exit 1
 
 # Run with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]

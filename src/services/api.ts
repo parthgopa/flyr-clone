@@ -1,9 +1,26 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// export const backendURL = 'http://192.168.31.55:5000';
-export const backendURL = 'https://22c2-103-241-226-107.ngrok-free.app';
+// export const backendURL = 'http://10.237.96.22:5000';
+    // export const backendURL = 'https://22c2-103-241-226-107.ngrok-free.app';
+export const backendURL = (process.env.EXPO_PUBLIC_BACKEND_URL || 'http://72.62.79.188:8000').replace(/\/+$/, '');
 
+axios.defaults.timeout = 30000;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout - server took too long to respond');
+    } else if (error.message === 'Network Error') {
+      console.error('Network Error - Check if server is reachable:', backendURL);
+    } else if (error.response) {
+      console.error('Server Error:', error.response.status, error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 console.log("backendURL", backendURL);
 

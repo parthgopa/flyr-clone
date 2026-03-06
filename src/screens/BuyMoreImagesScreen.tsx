@@ -77,15 +77,41 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
       console.error("❌ Purchase error:", error);
       
       // Handle different error types
-      if (error.success === false) {
-        // Error from backend verification
-        Alert.alert("Purchase Failed", error.message || "Something went wrong");
-      } else if (error.message?.includes('canceled')) {
+      if (error.code === 'E_USER_CANCELLED' || error.message?.includes('canceled')) {
         // User cancelled - show encouraging modal
+        console.log('User cancelled purchase');
         setShowCancelledModal(true);
+      } else if (error.code === 'billing-unavailable' || error.code === 'E_SERVICE_DISCONNECTED') {
+        // Google Play Billing not available (emulator, not logged in, etc.)
+        Alert.alert(
+          "Billing Unavailable",
+          "Google Play Billing is not available. Please ensure you're logged into Google Play and try again.",
+          [{ text: "OK" }]
+        );
+      } else if (error.code === 'E_PAYMENT_DECLINED' || error.message?.includes('declined')) {
+        // Payment declined by card/bank
+        Alert.alert(
+          "Payment Declined",
+          "Your payment was declined. Please check your payment method and try again.",
+          [{ text: "OK" }]
+        );
+      } else if (error.success === false && error.message?.includes('400')) {
+        // Backend verification failed (400 error)
+        Alert.alert(
+          "Verification Issue",
+          "Your payment was processed but we couldn't verify it with Google Play. Please contact support with your transaction details. Your purchase will be restored on next app restart.",
+          [{ text: "OK" }]
+        );
+      } else if (error.success === false) {
+        // Other backend verification errors
+        Alert.alert("Purchase Failed", error.message || "Something went wrong");
       } else {
-        // Other errors
-        Alert.alert("Error", error.message || "Failed to complete purchase");
+        // Other errors (network, timeout, etc.)
+        Alert.alert(
+          "Purchase Error",
+          error.message || "Failed to complete purchase. Please try again.",
+          [{ text: "OK" }]
+        );
       }
     } finally {
       setIsPurchasing(false);

@@ -126,10 +126,12 @@ def verify_purchase():
         product_id = data.get("productId")
         purchase_token = data.get("purchaseToken")
         package_name = data.get("packageName", PACKAGE_NAME)
+        transaction_id = data.get("transactionId", "")
         
         print(f"🏷️  Product ID: {product_id}")
         print(f"🎫 Purchase Token: {purchase_token[:50] if purchase_token else 'None'}...")
         print(f"📱 Package Name: {package_name}")
+        print(f"🔖 Transaction ID: {transaction_id}")
         
         if not product_id or not purchase_token:
             return jsonify({
@@ -210,13 +212,16 @@ def verify_purchase():
             }), 400
         
         # Purchase is valid - add credits to user
+        print(f"\n💳 Adding {credits} credits to user account...")
         User.add_credits(user_id, credits, reason=f"purchase_{product_id}")
         
         # Mark transaction as success
         Transaction.mark_as_verified(purchase_token, verification)
         
-        # Acknowledge purchase with Google Play
-        acknowledge_purchase(package_name, product_id, purchase_token)
+        # NOTE: DO NOT acknowledge purchase here for consumables!
+        # The client will call finishTransaction() to consume the purchase
+        # This allows the user to purchase the same product multiple times
+        print(f"ℹ️  Skipping backend acknowledgment - client will consume purchase")
         
         # Get updated user credits
         new_credits = User.get_credits(user_id)
@@ -226,6 +231,8 @@ def verify_purchase():
         print(f"   New balance: {new_credits}")
         print(f"   Transaction ID: {transaction['_id']}")
         print(f"   Order ID: {verification.get('order_id')}")
+        print(f"   Purchase State: {verification.get('purchase_state')}")
+        print(f"   Consumption State: {verification.get('consumption_state')}")
         print("="*60 + "\n")
         
         return jsonify({

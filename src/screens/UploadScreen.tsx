@@ -9,6 +9,7 @@ import AppButton from "../components/ui/AppButton";
 import AppText from "../components/ui/AppText";
 import AppHeader from "../components/ui/AppHeader";
 import UploadDropzone from "../components/UploadDropzone";
+import InsufficientCreditsModal from "../components/InsufficientCreditsModal";
 
 import { theme } from "../theme/theme";
 import { startGenerationJob } from "../services/api";
@@ -16,11 +17,13 @@ import { startGenerationJob } from "../services/api";
 export default function UploadScreen({ navigation, route }: any) {
   const { categoryId, model, customModelImage } = route.params;
   // console.log("category id:", categoryId);
-  // console.log("model:", model);
+  console.log("model:", model);
   // console.log("custom model image:", customModelImage);
 
   const [productImage, setProductImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
 
   /* ---------------- IMAGE PICKERS ---------------- */
 
@@ -71,14 +74,18 @@ export default function UploadScreen({ navigation, route }: any) {
 
       if (customModelImage) {
         // User uploaded their own photo
-        // console.log("Using custom model image");
         modelBase64 = await imageUriToBase64(customModelImage);
       } else if (model?.image) {
-        // Pre-built model: resolve bundled require() asset to a local URI, then base64
-        // console.log("Resolving pre-built model asset to base64");
-        const [asset] = await Asset.loadAsync(model.image);
-        if (asset.localUri) {
-          modelBase64 = await imageUriToBase64(asset.localUri);
+        // Check if model.image is a URL string or require() asset
+        if (typeof model.image === 'string') {
+          // It's a URL - convert directly to base64
+          modelBase64 = await imageUriToBase64(model.image);
+        } else {
+          // Pre-built model: resolve bundled require() asset to a local URI, then base64
+          const [asset] = await Asset.loadAsync(model.image);
+          if (asset.localUri) {
+            modelBase64 = await imageUriToBase64(asset.localUri);
+          }
         }
       }
 
@@ -105,9 +112,21 @@ export default function UploadScreen({ navigation, route }: any) {
         scenarios: res.scenarios,
         productImage,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.log("Generate error:", err);
-      Alert.alert("Error", "Failed to generate image");
+      
+      // Check if error is 402 - insufficient credits
+      if (err.response?.status === 402) {
+        const errorData = err.response.data;
+        setCreditsInfo({
+          needed: errorData.credits_needed || 0,
+          current: errorData.current_credits || 0,
+        });
+        setShowCreditsModal(true);
+      } else {
+        const errorMessage = err.message || "Failed to generate image";
+        Alert.alert("Error", errorMessage);
+      }
       setLoading(false);
     } finally {
       setLoading(false);
@@ -135,7 +154,10 @@ export default function UploadScreen({ navigation, route }: any) {
                 style={styles.modelImage}
               />
             ) : (
-              <Image source={model.image} style={styles.modelImage} />
+              <Image 
+                source={typeof model.image === 'string' ? { uri: model.image } : model.image} 
+                style={styles.modelImage} 
+              />
             )}
           </View>
         </View>
@@ -170,6 +192,19 @@ export default function UploadScreen({ navigation, route }: any) {
           onPress={handleGenerate}
         />
       </View>
+
+      {/* INSUFFICIENT CREDITS MODAL */}
+      <InsufficientCreditsModal
+        visible={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        onBuyCredits={() => {
+          setShowCreditsModal(false);
+          navigation.navigate("BuyMoreImages");
+        }}
+        creditsNeeded={creditsInfo.needed}
+        currentCredits={creditsInfo.current}
+        generationType="photos"
+      />
     </View>
   );
 }

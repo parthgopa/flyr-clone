@@ -641,6 +641,27 @@ def generate_branding_route():
         {"id": "branding_clean",   "label": f"{branding_meta['businessName']} — Clean"},
     ]
 
+    # Check if user has enough credits
+    credits_needed = len(scenarios)
+    from models.user import User
+    current_credits = User.get_credits(user_id)
+    
+    if current_credits < credits_needed:
+        return jsonify({
+            "error": "insufficient_credits",
+            "message": f"You need {credits_needed} credits but have only {current_credits}",
+            "credits_needed": credits_needed,
+            "current_credits": current_credits
+        }), 402  # 402 Payment Required
+
+    # Deduct credits upfront
+    deduction_result = User.deduct_credits(user_id, credits_needed, reason="image_generation_branding")
+    if not deduction_result["success"]:
+        return jsonify({
+            "error": "credit_deduction_failed",
+            "message": deduction_result["message"]
+        }), 400
+
     job_id = str(uuid.uuid4())[:8]
     jobs[job_id] = {
         "status": "generating",

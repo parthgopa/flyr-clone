@@ -10,6 +10,8 @@ import Slider from "@react-native-community/slider";
 import AppText from "../components/ui/AppText";
 import AppButton from "../components/ui/AppButton";
 import AppHeader from "../components/ui/AppHeader";
+import PurchaseSuccessModal from "../components/PurchaseSuccessModal";
+import PurchaseCancelledModal from "../components/PurchaseCancelledModal";
 import { theme } from "../theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { purchaseProduct, getProducts } from "../services/iapService";
@@ -23,6 +25,9 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [currentCredits, setCurrentCredits] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCancelledModal, setShowCancelledModal] = useState(false);
+  const [purchaseResult, setPurchaseResult] = useState({ creditsAdded: 0, totalCredits: 0 });
 
   const selectedValue = DISCRETE_VALUES[selectedIndex];
   const totalCost = selectedValue * COST_PER_IMAGE;
@@ -55,29 +60,33 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
       // Map selected value to product ID
       const productId = `image_pack_${selectedValue}`;
 
-      // Initiate purchase
+      console.log(`\n🛒 Starting purchase flow for ${productId}...`);
+
+      // Initiate purchase - this returns a promise that resolves when listener completes
       const result = await purchaseProduct(productId);
 
-      if (result.success) {
-        Alert.alert(
-          "Purchase Successful! 🎉",
-          `${selectedValue} credits have been added to your account.\n\nNew balance: ${result.total_credits} credits`,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                loadCredits(); // Refresh credits
-                navigation.goBack();
-              },
-            },
-          ]
-        );
-      } else {
-        Alert.alert("Purchase Failed", result.message || "Something went wrong");
-      }
+      console.log('✅ Purchase completed:', result);
+
+      // Success - show beautiful success modal
+      setPurchaseResult({
+        creditsAdded: selectedValue,
+        totalCredits: result.total_credits,
+      });
+      setShowSuccessModal(true);
     } catch (error: any) {
-      console.error("Purchase error:", error);
-      Alert.alert("Error", error.message || "Failed to complete purchase");
+      console.error("❌ Purchase error:", error);
+      
+      // Handle different error types
+      if (error.success === false) {
+        // Error from backend verification
+        Alert.alert("Purchase Failed", error.message || "Something went wrong");
+      } else if (error.message?.includes('canceled')) {
+        // User cancelled - show encouraging modal
+        setShowCancelledModal(true);
+      } else {
+        // Other errors
+        Alert.alert("Error", error.message || "Failed to complete purchase");
+      }
     } finally {
       setIsPurchasing(false);
     }
@@ -194,6 +203,31 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
           </AppText>
         </View>
       </ScrollView>
+
+      {/* SUCCESS MODAL */}
+      <PurchaseSuccessModal
+        visible={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          loadCredits(); // Refresh credits
+          navigation.goBack();
+        }}
+        creditsAdded={purchaseResult.creditsAdded}
+        totalCredits={purchaseResult.totalCredits}
+      />
+
+      {/* CANCELLED MODAL */}
+      <PurchaseCancelledModal
+        visible={showCancelledModal}
+        onClose={() => {
+          setShowCancelledModal(false);
+          setIsPurchasing(false); // Reset button state
+        }}
+        onTryAgain={() => {
+          setShowCancelledModal(false);
+          handlePurchase(); // Retry purchase
+        }}
+      />
     </View>
   );
 }

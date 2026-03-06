@@ -8,6 +8,7 @@ import AppButton from "../components/ui/AppButton";
 import AppText from "../components/ui/AppText";
 import AppHeader from "../components/ui/AppHeader";
 import UploadDropzone from "../components/UploadDropzone";
+import InsufficientCreditsModal from "../components/InsufficientCreditsModal";
 
 import { theme } from "../theme/theme";
 import { startCatalogueGenerationJob } from "../services/api";
@@ -17,6 +18,8 @@ export default function CatalogueUploadScreen({ navigation, route }: any) {
 
   const [productImage, setProductImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
 
   /* ---------------- IMAGE PICKERS ---------------- */
 
@@ -96,9 +99,20 @@ export default function CatalogueUploadScreen({ navigation, route }: any) {
         scenarios: res.scenarios,
         productImage,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.log("Generate error:", err);
-      Alert.alert("Error", "Failed to generate catalogue images");
+      
+      // Check if error is 402 - insufficient credits
+      if (err.response?.status === 402) {
+        const errorData = err.response.data;
+        setCreditsInfo({
+          needed: errorData.credits_needed || 0,
+          current: errorData.current_credits || 0,
+        });
+        setShowCreditsModal(true);
+      } else {
+        Alert.alert("Error", "Failed to generate catalogue images");
+      }
       setLoading(false);
     } finally {
       setLoading(false);
@@ -165,6 +179,19 @@ export default function CatalogueUploadScreen({ navigation, route }: any) {
           onPress={handleGenerate}
         />
       </View>
+
+      {/* INSUFFICIENT CREDITS MODAL */}
+      <InsufficientCreditsModal
+        visible={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        onBuyCredits={() => {
+          setShowCreditsModal(false);
+          navigation.navigate("BuyMoreImages");
+        }}
+        creditsNeeded={creditsInfo.needed}
+        currentCredits={creditsInfo.current}
+        generationType="catalogue"
+      />
     </View>
   );
 }

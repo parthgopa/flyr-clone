@@ -8,6 +8,7 @@ import AppButton from "../components/ui/AppButton";
 import AppText from "../components/ui/AppText";
 import AppHeader from "../components/ui/AppHeader";
 import UploadDropzone from "../components/UploadDropzone";
+import InsufficientCreditsModal from "../components/InsufficientCreditsModal";
 
 import { theme } from "../theme/theme";
 import { startBrandingGenerationJob } from "../services/api";
@@ -22,6 +23,8 @@ export default function BrandingUploadScreen({ navigation, route }: Props) {
 
     const [productImage, setProductImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
+    const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
 
     /* ── Image Pickers ───────────────────────────────────────────────────────── */
 
@@ -106,9 +109,20 @@ export default function BrandingUploadScreen({ navigation, route }: Props) {
                 scenarios: res.scenarios,
                 productImage,
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error("Branding generate error:", err);
-            Alert.alert("Error", "Failed to generate branding image. Please try again.");
+            
+            // Check if error is 402 - insufficient credits
+            if (err.response?.status === 402) {
+                const errorData = err.response.data;
+                setCreditsInfo({
+                    needed: errorData.credits_needed || 0,
+                    current: errorData.current_credits || 0,
+                });
+                setShowCreditsModal(true);
+            } else {
+                Alert.alert("Error", "Failed to generate branding image. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
@@ -198,6 +212,19 @@ export default function BrandingUploadScreen({ navigation, route }: Props) {
                     disabled={loading || !productImage}
                 />
             </View>
+
+            {/* INSUFFICIENT CREDITS MODAL */}
+            <InsufficientCreditsModal
+                visible={showCreditsModal}
+                onClose={() => setShowCreditsModal(false)}
+                onBuyCredits={() => {
+                    setShowCreditsModal(false);
+                    navigation.navigate("BuyMoreImages");
+                }}
+                creditsNeeded={creditsInfo.needed}
+                currentCredits={creditsInfo.current}
+                generationType="branded"
+            />
         </View>
     );
 }

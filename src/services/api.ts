@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // export const backendURL = 'http://192.168.31.55:5000';
-export const backendURL = 'https://0ad2-103-241-226-107.ngrok-free.app';
+export const backendURL = 'https://22c2-103-241-226-107.ngrok-free.app';
 
 
 console.log("backendURL", backendURL);
@@ -149,6 +149,7 @@ export const verifyPurchase = async (purchaseData: {
   productId: string;
   purchaseToken: string;
   packageName: string;
+  transactionId?: string;
 }) => {
   console.log('\n' + '='.repeat(60));
   console.log('📤 SENDING PURCHASE VERIFICATION TO BACKEND');
@@ -156,6 +157,7 @@ export const verifyPurchase = async (purchaseData: {
   console.log('🏷️  Product ID:', purchaseData.productId);
   console.log('🎫 Purchase Token:', purchaseData.purchaseToken.substring(0, 50) + '...');
   console.log('📱 Package Name:', purchaseData.packageName);
+  console.log('🔖 Transaction ID:', purchaseData.transactionId || 'N/A');
   console.log('🌐 Backend URL:', `${backendURL}/purchase/verify`);
   
   try {

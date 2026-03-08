@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from bson import ObjectId
 from database import generations_col
+from models.user import User
 from utils.auth_middleware import require_auth
 
 user_bp = Blueprint("user", __name__)
@@ -100,3 +101,47 @@ def my_profile():
     except Exception as e:
         print(f"User profile error: {e}")
         return jsonify({"error": "Failed to get profile"}), 500
+
+
+@user_bp.route("/my-profile", methods=["PUT"])
+@require_auth
+def update_my_profile():
+    try:
+        user = request.current_user
+        data = request.get_json() or {}
+
+        name = (data.get("name") or "").strip()
+        phone = (data.get("phone") or "").strip()
+        profile_picture = data.get("profile_picture")
+
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+
+        update_data = {
+            "name": name,
+            "phone": phone,
+            "profile_picture": profile_picture,
+        }
+
+        User.update_user(str(user["_id"]), update_data)
+        updated_user = User.find_by_id(str(user["_id"]))
+
+        if not updated_user:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": str(updated_user["_id"]),
+                "name": updated_user.get("name", ""),
+                "email": updated_user.get("email", ""),
+                "phone": updated_user.get("phone", ""),
+                "profile_picture": updated_user.get("profile_picture"),
+                "status": updated_user.get("status", "active"),
+                "role": updated_user.get("role", "user"),
+                "created_at": updated_user.get("created_at").isoformat() if updated_user.get("created_at") else None,
+            }
+        })
+    except Exception as e:
+        print(f"Update user profile error: {e}")
+        return jsonify({"error": "Failed to update profile"}), 500

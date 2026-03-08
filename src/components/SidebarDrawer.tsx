@@ -15,7 +15,7 @@ import { theme } from "../theme/theme";
 import { useAuth } from "../context/AuthContext";
 import { getUserCredits } from "../services/api";
 
-const DRAWER_WIDTH = Dimensions.get("window").width * 0.75;
+const DRAWER_WIDTH = Dimensions.get("window").width * 0.80;
 
 interface SidebarDrawerProps {
     visible: boolean;
@@ -41,7 +41,7 @@ export default function SidebarDrawer({ visible, onClose, onNavigate }: SidebarD
             loadCredits();
         } else {
             Animated.parallel([
-                Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
                 Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
             ]).start();
         }
@@ -187,6 +187,9 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background,
         paddingTop: theme.spacing.safeTop + 10,
         paddingBottom: theme.spacing.xl,
+        borderTopLeftRadius: theme.radius.xl,
+        borderBottomLeftRadius: theme.radius.xl,
+        overflow: "hidden",
     },
 
     userSection: {

@@ -1,9 +1,8 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// export const backendURL = 'http://10.237.96.22:5000';
-    // export const backendURL = 'https://22c2-103-241-226-107.ngrok-free.app';
-export const backendURL = (process.env.EXPO_PUBLIC_BACKEND_URL || 'http://72.62.79.188:8000').replace(/\/+$/, '');
+// export const backendURL = 'https://flyr.onewebmart.cloud';
+export const backendURL = 'http://10.73.240.22:5000';
 
 axios.defaults.timeout = 30000;
 axios.defaults.headers.common['Content-Type'] = 'application/json';

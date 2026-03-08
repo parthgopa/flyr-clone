@@ -39,6 +39,12 @@ export interface UserProfile {
     created_at: string | null;
 }
 
+export interface UpdateUserProfilePayload {
+    name: string;
+    phone: string;
+    profile_picture?: string | null;
+}
+
 // ─── API Functions ──────────────────────────────────────────────────────────
 
 export async function fetchMyGenerations(
@@ -62,4 +68,12 @@ export async function fetchMyProfile(): Promise<UserProfile> {
         headers: authHeaders(token),
     });
     return res.data;
+}
+
+export async function updateMyProfile(payload: UpdateUserProfilePayload): Promise<UserProfile> {
+    const token = await getAuthToken();
+    const res = await axios.put(`${backendURL}/user/my-profile`, payload, {
+        headers: authHeaders(token),
+    });
+    return res.data.user;
 }

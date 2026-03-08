@@ -40,7 +40,7 @@ export default function UserHistoryScreen({ navigation }: any) {
     const loadData = useCallback(async () => {
         try {
             const data = await fetchMyGenerations(filterCategory);
-            console.log("data", data);
+            // console.log("data", data);
             setGenerations(data.generations);
             setCategories(data.categories);
         } catch (err) {

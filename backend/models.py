@@ -4,8 +4,6 @@ from config import config
 # Initialize Client
 client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-print(f"{'Model ID':<50} | {'Capabilities'}")
-print("-" * 80)
 
 image_models = []
 
@@ -17,8 +15,7 @@ for model in client.models.list():
     # supported_actions might be a list, so join them with commas
     actions = ", ".join(model.supported_actions) if isinstance(model.supported_actions, list) else str(model.supported_actions)
     
-    print(f"{name} | {actions}")
-    # print(model)
+
     # methods = model.supported_generation_methods or []
     
     # # Check if the model supports image generation
@@ -38,7 +35,3 @@ for model in client.models.list():
     #     # print(f"{model.name:<50} | {methods}")
     #     pass
 
-print("-" * 80)
-print("\n✅ Recommended Models for Image Generation:")
-for m in image_models:
-    print(f" - {m}")

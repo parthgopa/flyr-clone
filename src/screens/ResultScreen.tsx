@@ -135,6 +135,14 @@ export default function ResultScreen({ route, navigation }: any) {
   const completedCount = allImages.length;
   const progress = totalImages > 0 ? images.length / totalImages : 0;
 
+  // Auto-scroll to first generated image when it arrives
+  useEffect(() => {
+    if (images.length === 1) {
+      const firstGeneratedIndex = productImage ? 1 : 0;
+      setActiveIndex(firstGeneratedIndex);
+    }
+  }, [images.length, productImage]);
+
   return (
     <View style={styles.screen}>
       <AppHeader title="Results" onBack={() => navigation.goBack()} />
@@ -146,8 +154,7 @@ export default function ResultScreen({ route, navigation }: any) {
             <View style={styles.progressRow}>
               <ActivityIndicator size="small" color={theme.colors.accent} />
               <AppText style={styles.statusText}>
-                Generating {completedCount}/{totalImages}
-                {currentScenario ? ` — ${currentScenario}` : ""}
+                Generating images{currentScenario ? ` — ${currentScenario}` : "..."}
               </AppText>
             </View>
             <View style={styles.progressTrack}>
@@ -157,160 +164,116 @@ export default function ResultScreen({ route, navigation }: any) {
         ) : (
           <View style={styles.progressRow}>
             <AppText style={styles.doneText}>
-              ✓ {completedCount} image{completedCount !== 1 ? "s" : ""} generated
+              ✓ All images generated
             </AppText>
           </View>
         )}
       </View>
 
-      {/* Gallery — show completed images + skeleton placeholders */}
-      {completedCount > 0 ? (
-        <>
-          <View style={styles.counterRow}>
-            <AppText style={styles.counterText}>
-              {activeIndex + 1} / {completedCount}
-            </AppText>
-            <AppText style={styles.scenarioLabel}>
+      {/* Main Image Display */}
+      {allImages.length > 0 && (
+        <View style={styles.mainImageContainer}>
+          <View style={styles.mainImageCard}>
+            {allImages[activeIndex]?.scenarioId === "__original__" && (
+              <View style={styles.originalBanner}>
+                <Ionicons name="image-outline" size={14} color={theme.colors.white} />
+                <AppText style={styles.originalBannerText}>Original Product</AppText>
+              </View>
+            )}
+            <Image
+              source={{
+                uri: allImages[activeIndex]?.scenarioId === "__original__"
+                  ? allImages[activeIndex].imageUrl
+                  : getFullImageUrl(allImages[activeIndex]?.imageUrl || "")
+              }}
+              style={styles.mainImage}
+              resizeMode="contain"
+            />
+            <TouchableOpacity
+              style={styles.expandBtn}
+              onPress={() => {
+                setZoomImageIndex(activeIndex);
+                setZoomVisible(true);
+              }}
+            >
+              <Ionicons name="expand-outline" size={24} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.mainImageFooter}>
+            <AppText style={styles.mainImageLabel}>
               {allImages[activeIndex]?.label}
             </AppText>
-          </View>
-
-          <FlatList
-            ref={flatListRef}
-            data={allImages}
-            keyExtractor={(item) => item.scenarioId}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            renderItem={({ item }) => {
-              const isOriginal = item.scenarioId === "__original__";
-              const imageUri = isOriginal ? item.imageUrl : getFullImageUrl(item.imageUrl);
-              return (
-                <View style={styles.slide}>
-                  <View style={[styles.imageCard, isOriginal && { borderColor: theme.colors.accent, borderWidth: 2 }]}>
-                    {isOriginal && (
-                      <View style={styles.originalLabel}>
-                        <Ionicons name="image-outline" size={12} color={theme.colors.white} />
-                        <AppText style={styles.originalLabelText}>Original Product</AppText>
-                      </View>
-                    )}
-                    <Image source={{ uri: imageUri }} style={styles.image} />
-                    <TouchableOpacity
-                      style={styles.zoomBtn}
-                      onPress={() => {
-                        const idx = allImages.findIndex((img) => img.scenarioId === item.scenarioId);
-                        setZoomImageIndex(idx >= 0 ? idx : 0);
-                        setZoomVisible(true);
-                      }}
-                    >
-                      <Ionicons name="expand-outline" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.slideFooter}>
-                    <AppText style={[styles.slideLabel, isOriginal && { color: theme.colors.accent, fontWeight: "700" }]}>{item.label}</AppText>
-                    {!isOriginal && (
-                      <TouchableOpacity
-                        style={styles.downloadButton}
-                        onPress={() => downloadImage(imageUri, `${item.label.replace(/\s+/g, '_')}.jpg`)}
-                      >
-                        <Ionicons name="download-outline" size={16} color={theme.colors.background} />
-                        <AppText style={styles.downloadText}>Download</AppText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              );
-            }}
-          />
-
-          {/* Thumbnail navigation for Catalogue, Dot indicators for Photo Shoot & Branding */}
-          {completedCount > 1 && (
-            isCatalogue ? (
-              <View style={styles.thumbnailRow}>
-                {allImages.map((img, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.thumbnail,
-                      idx === activeIndex && styles.thumbnailActive,
-                      img.scenarioId === "__original__" && styles.thumbnailOriginal,
-                    ]}
-                    onPress={() => {
-                      setActiveIndex(idx);
-                      flatListRef.current?.scrollToIndex({ index: idx, animated: true });
-                    }}
-                  >
-                    <Image
-                      source={{ uri: img.scenarioId === "__original__" ? img.imageUrl : getFullImageUrl(img.imageUrl) }}
-                      style={styles.thumbnailImage}
-                    />
-                    {idx === activeIndex && (
-                      <View style={styles.thumbnailBorder} />
-                    )}
-                    {img.scenarioId === "__original__" && (
-                      <View style={styles.originalBadge}>
-                        <AppText style={styles.originalBadgeText}>Original</AppText>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.dotsRow}>
-                {allImages.map((img, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.dot,
-                      idx === activeIndex && styles.dotActive,
-                      img.scenarioId === "__original__" && styles.dotOriginal,
-                    ]}
-                  />
-                ))}
-              </View>
-            )
-          )}
-        </>
-      ) : (
-        /* Skeleton loading state — no images yet */
-        <View style={styles.skeletonContainer}>
-          <Animated.View style={[styles.skeletonCard, { opacity: pulseAnim }]}>
-            <View style={styles.skeletonImage} />
-          </Animated.View>
-          <AppText style={styles.waitingText}>
-            Creating your first image...
-          </AppText>
-          <View style={styles.scenarioList}>
-            {scenarios.map((s, idx) => (
-              <View key={s.id} style={styles.scenarioRow}>
-                <View
-                  style={[
-                    styles.scenarioDot,
-                    currentScenario === s.label && styles.scenarioDotActive,
-                  ]}
-                />
-                <AppText
-                  style={[
-                    styles.scenarioItem,
-                    currentScenario === s.label && styles.scenarioItemActive,
-                  ]}
-                >
-                  {s.label}
-                </AppText>
-                {currentScenario === s.label && (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.accent}
-                    style={{ marginLeft: 8 }}
-                  />
-                )}
-              </View>
-            ))}
+            {allImages[activeIndex]?.scenarioId !== "__original__" && (
+              <TouchableOpacity
+                style={styles.downloadButton}
+                onPress={() => {
+                  const img = allImages[activeIndex];
+                  const uri = getFullImageUrl(img.imageUrl);
+                  downloadImage(uri, `${img.label.replace(/\s+/g, '_')}.jpg`);
+                }}
+              >
+                <Ionicons name="download-outline" size={16} color={theme.colors.background} />
+                <AppText style={styles.downloadText}>Download</AppText>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
+
+      {/* Thumbnail Strip with Loading States */}
+      <View style={styles.thumbnailSection}>
+        <FlatList
+          ref={flatListRef}
+          data={[
+            ...(productImage ? [{ scenarioId: "__original__", label: "Original Product", imageUrl: productImage }] : []),
+            ...Array.from({ length: totalImages }).map((_, idx) => {
+              const img = images[idx];
+              return img || { scenarioId: `loading-${idx}`, label: `Image ${idx + 1}`, imageUrl: "", loading: true };
+            })
+          ]}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, idx) => `${item.scenarioId}-${idx}`}
+          contentContainerStyle={styles.thumbnailList}
+          renderItem={({ item, index }) => {
+            const isOriginal = item.scenarioId === "__original__";
+            const isLoading = (item as any).loading;
+            const isActive = index === activeIndex;
+
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.thumbnail,
+                  isActive && styles.thumbnailActive,
+                  isOriginal && styles.thumbnailOriginal,
+                ]}
+                onPress={() => !isLoading && setActiveIndex(index)}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <View style={styles.thumbnailLoading}>
+                    <ActivityIndicator size="small" color={theme.colors.accent} />
+                  </View>
+                ) : (
+                  <>
+                    <Image
+                      source={{
+                        uri: isOriginal ? item.imageUrl : getFullImageUrl(item.imageUrl)
+                      }}
+                      style={styles.thumbnailImage}
+                    />
+                    {isOriginal && (
+                      <View style={styles.thumbnailOriginalBadge}>
+                        <AppText style={styles.thumbnailOriginalText}>Original</AppText>
+                      </View>
+                    )}
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
       {/* Footer */}
       {isDone && (
@@ -384,22 +347,124 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // --- Counter ---
-  counterRow: {
+  // --- Main Image Display ---
+  mainImageContainer: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.screenPadding,
+    paddingTop: theme.spacing.md,
+    justifyContent: "center",
+  },
+  mainImageCard: {
+    borderRadius: theme.radius.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    position: "relative",
+  },
+  mainImage: {
+    width: "100%",
+    height: IMAGE_HEIGHT,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  originalBanner: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 6,
+  },
+  originalBannerText: {
+    ...theme.typography.caption,
+    color: theme.colors.white,
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  expandBtn: {
+    position: "absolute",
+    bottom: theme.spacing.sm,
+    right: theme.spacing.sm,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mainImageFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  mainImageLabel: {
+    ...theme.typography.bodyMedium,
+    color: theme.colors.secondary,
+    flex: 1,
+  },
+
+  // --- Thumbnail Strip ---
+  thumbnailSection: {
+    paddingVertical: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  thumbnailList: {
     paddingHorizontal: theme.spacing.screenPadding,
-    paddingBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
-  counterText: {
+  thumbnail: {
+    width: 70,
+    height: 70,
+    borderRadius: theme.radius.md,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  thumbnailActive: {
+    borderColor: theme.colors.accent,
+    borderWidth: 3,
+  },
+  thumbnailOriginal: {
+    borderColor: theme.colors.accent,
+    opacity: 0.9,
+  },
+  thumbnailImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  thumbnailLoading: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  thumbnailOriginalBadge: {
+    position: "absolute",
+    bottom: 2,
+    left: 2,
+    right: 2,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingVertical: 1,
+    borderRadius: 3,
+    alignItems: "center",
+  },
+  thumbnailOriginalText: {
     ...theme.typography.caption,
-    color: theme.colors.muted,
-    fontWeight: "600",
-  },
-  scenarioLabel: {
-    ...theme.typography.subtitle,
-    color: theme.colors.accent,
+    color: theme.colors.white,
+    fontSize: 8,
+    fontWeight: "700",
   },
 
   // --- Gallery ---
@@ -483,7 +548,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // --- Thumbnail Navigation (Catalogue View) ---
+  // --- Thumbnail Navigation (Old - kept for compatibility) ---
   thumbnailRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -491,24 +556,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.screenPadding,
-  },
-  thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: theme.radius.sm,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    position: "relative",
-  },
-  thumbnailActive: {
-    borderColor: theme.colors.accent,
-    borderWidth: 3,
-  },
-  thumbnailImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
   },
   thumbnailBorder: {
     position: "absolute",
@@ -608,10 +655,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: "700",
     fontSize: 11,
-  },
-  thumbnailOriginal: {
-    borderColor: theme.colors.accent,
-    borderWidth: 2,
   },
   originalBadge: {
     position: "absolute",

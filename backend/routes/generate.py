@@ -20,6 +20,54 @@ generate_bp = Blueprint("generate", __name__)
 jobs = {}
 
 
+def _serialize_job_from_generation(job_id: str, generation: dict) -> dict:
+    metadata = generation.get("metadata", {})
+    sub_category = metadata.get("sub_category", "shoot")
+    stored_urls = generation.get("result_urls", [])
+    original_product_url = metadata.get("original_product_url")
+
+    if original_product_url and stored_urls and stored_urls[0] == original_product_url:
+        stored_urls = stored_urls[1:]
+
+    labels = metadata.get("scenarios") or metadata.get("model_labels") or []
+    images = []
+    for idx, url in enumerate(stored_urls):
+        label = labels[idx] if idx < len(labels) else f"Image {idx + 1}"
+        scenario_id = f"{sub_category}_{idx}"
+        images.append({
+            "scenarioId": scenario_id,
+            "label": label,
+            "imageUrl": url,
+        })
+
+    return {
+        "jobId": job_id,
+        "status": generation.get("status", "done"),
+        "totalImages": metadata.get("total_images", len(images)),
+        "completedImages": len(images),
+        "currentScenario": metadata.get("currentScenario"),
+        "images": images,
+        "errors": metadata.get("errors", []),
+    }
+
+
+def _persist_job_state(job_id: str, job: dict):
+    generations_col.update_one(
+        {"metadata.job_id": job_id},
+        {
+            "$set": {
+                "status": job["status"],
+                "result_urls": [img["imageUrl"] for img in job["images"]],
+                "metadata.total_images": job["totalImages"],
+                "metadata.currentScenario": job.get("currentScenario"),
+                "metadata.errors": job["errors"],
+                "metadata.images": job["images"],
+                "metadata.updated_at": datetime.utcnow(),
+            }
+        }
+    )
+
+
 def get_scenarios(category_id: str) -> list:
     """Fetch active scenarios from DB, fallback to hardcoded file."""
     try:
@@ -106,7 +154,24 @@ def save_product_image_from_base64(base64_str: str, user_data: dict, gen_type: s
 
 def _run_generation(job_id: str, category_id: str, model_image: str, product_image: str, user_id: str = None):
     """Background worker: generates images one by one, updating the job store after each."""
-    job = jobs[job_id]
+    job = jobs.get(job_id)
+    if not job:
+        generation = generations_col.find_one({"metadata.job_id": job_id})
+        if not generation:
+            print(f"[Job {job_id}] Missing persisted job state")
+            return
+        metadata = generation.get("metadata", {})
+        job = {
+            "status": generation.get("status", "generating"),
+            "totalImages": metadata.get("total_images", 0),
+            "images": metadata.get("images", []),
+            "errors": metadata.get("errors", []),
+            "scenarios": metadata.get("scenario_defs", []),
+            "currentScenario": metadata.get("currentScenario"),
+            "categoryId": generation.get("category"),
+            "userId": str(generation.get("user_id")),
+        }
+        jobs[job_id] = job
     scenarios = job["scenarios"]
     total = len(scenarios)
     generated_urls = []
@@ -125,6 +190,7 @@ def _run_generation(job_id: str, category_id: str, model_image: str, product_ima
 
         print(f"[Job {job_id}] [{idx+1}/{total}] Generating: {label}")
         job["currentScenario"] = label
+        _persist_job_state(job_id, job)
 
         try:
             prompt = build_prompt(category_id, scenario_hint=hint)
@@ -157,6 +223,7 @@ def _run_generation(job_id: str, category_id: str, model_image: str, product_ima
             })
             
             generated_urls.append(image_url)
+            _persist_job_state(job_id, job)
 
             print(f"  ✓ {label} done ({len(job['images'])}/{total}) - Filename: {creative_filename}")
             print(f"    Tokens used: {token_usage}")
@@ -164,37 +231,36 @@ def _run_generation(job_id: str, category_id: str, model_image: str, product_ima
         except Exception as e:
             print(f"  ✗ {label} failed: {e}")
             job["errors"].append({"scenarioId": scenario_id, "label": label, "error": str(e)})
+            _persist_job_state(job_id, job)
 
     job["status"] = "done"
     job["currentScenario"] = None
     job["total_tokens"] = total_tokens
+    _persist_job_state(job_id, job)
     print(f"[Job {job_id}] Complete: {len(job['images'])}/{total} images")
     print(f"[Job {job_id}] Total tokens used: {total_tokens}")
-    
-    # Save generation record with userId if provided
-    if user_id and generated_urls:
-        try:
-            # Prepend original product image URL to result_urls
-            all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
-            
-            Generation.create_generation(
-                user_id=user_id,
-                generation_type="image",
-                category=category_id,
-                prompt=f"Generated {len(generated_urls)} images for {category_id}",
-                result_urls=all_urls,
-                metadata={
-                    "job_id": job_id,
-                    "scenarios": [s["label"] for s in scenarios],
-                    "total_images": len(generated_urls),
-                    "total_tokens": total_tokens,
-                    "sub_category": "shoot",
-                    "original_product_url": original_product_url,
+
+    try:
+        all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
+        generations_col.update_one(
+            {"metadata.job_id": job_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "prompt": f"Generated {len(generated_urls)} images for {category_id}",
+                    "result_urls": all_urls,
+                    "metadata.scenarios": [s["label"] for s in scenarios],
+                    "metadata.total_images": len(generated_urls),
+                    "metadata.total_tokens": total_tokens,
+                    "metadata.sub_category": "shoot",
+                    "metadata.original_product_url": original_product_url,
+                    "metadata.updated_at": datetime.utcnow(),
                 }
-            )
-            print(f"[Job {job_id}] Generation record saved for user {user_id}")
-        except Exception as e:
-            print(f"[Job {job_id}] Failed to save generation record: {e}")
+            }
+        )
+        print(f"[Job {job_id}] Generation record saved for user {user_id}")
+    except Exception as e:
+        print(f"[Job {job_id}] Failed to save generation record: {e}")
 
 
 @generate_bp.route("/generate-image", methods=["POST", "GET"])
@@ -253,6 +319,27 @@ def generate_image_route():
         "userId": user_id,
     }
 
+    Generation.create_generation(
+        user_id=user_id,
+        generation_type="image",
+        category=category_id,
+        prompt=f"Generating images for {category_id}",
+        result_urls=[],
+        metadata={
+            "job_id": job_id,
+            "scenarios": [s["label"] for s in scenarios],
+            "scenario_defs": scenarios,
+            "total_images": len(scenarios),
+            "total_tokens": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "sub_category": "shoot",
+            "currentScenario": None,
+            "errors": [],
+            "images": [],
+            "updated_at": datetime.utcnow(),
+        },
+        status="generating"
+    )
+
     print(f"[Job {job_id}] Started: {len(scenarios)} scenario(s) for '{category_id}' (User: {user_id})")
 
     # Spawn background thread
@@ -273,7 +360,24 @@ def generate_image_route():
 
 def _run_catalogue_generation(job_id: str, category_id: str, model_images: list, product_image: str, model_labels: list, user_id: str = None):
     """Background worker for catalogue: generates images with multiple model images."""
-    job = jobs[job_id]
+    job = jobs.get(job_id)
+    if not job:
+        generation = generations_col.find_one({"metadata.job_id": job_id})
+        if not generation:
+            print(f"[Job {job_id}] Missing persisted catalogue job state")
+            return
+        metadata = generation.get("metadata", {})
+        job = {
+            "status": generation.get("status", "generating"),
+            "totalImages": metadata.get("total_images", 0),
+            "images": metadata.get("images", []),
+            "errors": metadata.get("errors", []),
+            "scenarios": metadata.get("scenario_defs", []),
+            "currentScenario": metadata.get("currentScenario"),
+            "categoryId": generation.get("category"),
+            "userId": str(generation.get("user_id")),
+        }
+        jobs[job_id] = job
     total = len(model_images)
     generated_urls = []
     total_tokens = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
@@ -289,6 +393,7 @@ def _run_catalogue_generation(job_id: str, category_id: str, model_images: list,
     for idx, (model_image, label) in enumerate(zip(model_images, model_labels)):
         print(f"[Job {job_id}] [{idx+1}/{total}] Generating catalogue with: {label}")
         job["currentScenario"] = label
+        _persist_job_state(job_id, job)
 
         try:
             # Generate highly accurate category-specific prompt
@@ -325,6 +430,7 @@ def _run_catalogue_generation(job_id: str, category_id: str, model_images: list,
             })
             
             generated_urls.append(image_url)
+            _persist_job_state(job_id, job)
 
             print(f"  ✓ {label} done ({len(job['images'])}/{total}) - Filename: {creative_filename}")
             print(f"    Tokens used: {token_usage}")
@@ -332,50 +438,38 @@ def _run_catalogue_generation(job_id: str, category_id: str, model_images: list,
         except Exception as e:
             print(f"  ✗ {label} failed: {e}")
             job["errors"].append({"scenarioId": f"catalogue_{idx}", "label": label, "error": str(e)})
+            _persist_job_state(job_id, job)
 
     job["status"] = "done"
     job["currentScenario"] = None
     job["total_tokens"] = total_tokens
+    _persist_job_state(job_id, job)
     print(f"[Job {job_id}] Complete: {len(job['images'])}/{total} catalogue images")
     print(f"[Job {job_id}] Total tokens used: {total_tokens}")
-    
-    # Save generation record
-    print(f"[Job {job_id}] Attempting to save generation record...")
-    print(f"[Job {job_id}] User ID: {user_id}")
-    print(f"[Job {job_id}] Generated URLs: {len(generated_urls)}")
-    print(f"[Job {job_id}] User data: {user_data}")
-    
-    if user_id and generated_urls:
-        try:
-            # Prepend original product image URL to result_urls
-            all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
-            
-            generation_data = {
-                "user_id": user_id,
-                "generation_type": "image",
-                "category": category_id,
-                "prompt": f"Generated {len(generated_urls)} catalogue images for {category_id}",
-                "result_urls": all_urls,
-                "metadata": {
-                    "job_id": job_id,
-                    "model_labels": model_labels,
-                    "total_images": len(generated_urls),
-                    "total_tokens": total_tokens,
-                    "sub_category": "catalogue",
-                    "original_product_url": original_product_url,
+
+    try:
+        all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
+        generations_col.update_one(
+            {"metadata.job_id": job_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "prompt": f"Generated {len(generated_urls)} catalogue images for {category_id}",
+                    "result_urls": all_urls,
+                    "metadata.model_labels": model_labels,
+                    "metadata.total_images": len(generated_urls),
+                    "metadata.total_tokens": total_tokens,
+                    "metadata.sub_category": "catalogue",
+                    "metadata.original_product_url": original_product_url,
+                    "metadata.updated_at": datetime.utcnow(),
                 }
             }
-            
-            print(f"[Job {job_id}] Generation data: {generation_data}")
-            
-            Generation.create_generation(**generation_data)
-            print(f"[Job {job_id}] ✅ Catalogue generation record saved for user {user_id}")
-        except Exception as e:
-            print(f"[Job {job_id}] ❌ Failed to save generation record: {e}")
-            import traceback
-            traceback.print_exc()
-    else:
-        print(f"[Job {job_id}] ⚠️ Skipping database save - user_id: {user_id}, urls: {len(generated_urls)}")
+        )
+        print(f"[Job {job_id}] ✅ Catalogue generation record saved for user {user_id}")
+    except Exception as e:
+        print(f"[Job {job_id}] ❌ Failed to save generation record: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @generate_bp.route("/generate-catalogue", methods=["POST"])
@@ -433,6 +527,27 @@ def generate_catalogue_route():
         "userId": user_id,
     }
 
+    Generation.create_generation(
+        user_id=user_id,
+        generation_type="image",
+        category=category_id,
+        prompt=f"Generating catalogue images for {category_id}",
+        result_urls=[],
+        metadata={
+            "job_id": job_id,
+            "model_labels": model_labels,
+            "scenario_defs": scenarios,
+            "total_images": len(model_images),
+            "total_tokens": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "sub_category": "catalogue",
+            "currentScenario": None,
+            "errors": [],
+            "images": [],
+            "updated_at": datetime.utcnow(),
+        },
+        status="generating"
+    )
+
     print(f"[Job {job_id}] Started catalogue: {len(model_images)} image(s) for '{category_id}' (User: {user_id})")
     print(f"[Job {job_id}] Deducted {credits_needed} credits, remaining: {deduction_result['remaining_credits']}")
 
@@ -457,44 +572,26 @@ def get_job_status(job_id: str):
     """Poll endpoint: returns current job status + images generated so far."""
     job = jobs.get(job_id)
     
-    # If job not in memory, try to retrieve from generations collection
+    if job:
+        return jsonify({
+            "jobId": job_id,
+            "status": job["status"],
+            "totalImages": job["totalImages"],
+            "completedImages": len(job["images"]),
+            "currentScenario": job.get("currentScenario"),
+            "images": job["images"],
+            "errors": job["errors"],
+        })
+
     if not job:
         print(f"[Job {job_id}] Not found in memory, checking database...")
         generation = generations_col.find_one({"metadata.job_id": job_id})
         
         if generation:
             print(f"[Job {job_id}] Found in database, reconstructing job data")
-            # Reconstruct job data from database record
-            images = []
-            for idx, url in enumerate(generation.get("result_urls", [])):
-                scenario_label = generation["metadata"]["scenarios"][idx] if idx < len(generation["metadata"]["scenarios"]) else f"Image {idx+1}"
-                images.append({
-                    "scenarioId": f"scenario_{idx}",
-                    "label": scenario_label,
-                    "imageUrl": url
-                })
-            
-            return jsonify({
-                "jobId": job_id,
-                "status": "done",
-                "totalImages": generation["metadata"]["total_images"],
-                "completedImages": len(images),
-                "currentScenario": None,
-                "images": images,
-                "errors": [],
-            })
+            return jsonify(_serialize_job_from_generation(job_id, generation))
         
         return jsonify({"error": "Job not found"}), 404
-
-    return jsonify({
-        "jobId": job_id,
-        "status": job["status"],
-        "totalImages": job["totalImages"],
-        "completedImages": len(job["images"]),
-        "currentScenario": job.get("currentScenario"),
-        "images": job["images"],
-        "errors": job["errors"],
-    })
 
 
 # ─── Branding Generation ─────────────────────────────────────────────────────
@@ -510,7 +607,24 @@ def _run_branding_generation(
     user_id: str = None
 ):
     """Background worker for branding: generates branded product images."""
-    job = jobs[job_id]
+    job = jobs.get(job_id)
+    if not job:
+        generation = generations_col.find_one({"metadata.job_id": job_id})
+        if not generation:
+            print(f"[Job {job_id}] Missing persisted branding job state")
+            return
+        metadata = generation.get("metadata", {})
+        job = {
+            "status": generation.get("status", "generating"),
+            "totalImages": metadata.get("total_images", 0),
+            "images": metadata.get("images", []),
+            "errors": metadata.get("errors", []),
+            "scenarios": metadata.get("scenario_defs", []),
+            "currentScenario": metadata.get("currentScenario"),
+            "categoryId": generation.get("category"),
+            "userId": str(generation.get("user_id")),
+        }
+        jobs[job_id] = job
     scenarios = job["scenarios"]
     total = len(scenarios)
     generated_urls = []
@@ -528,6 +642,7 @@ def _run_branding_generation(
 
         print(f"[Job {job_id}] [{idx+1}/{total}] Generating branding: {label}")
         job["currentScenario"] = label
+        _persist_job_state(job_id, job)
 
         try:
             prompt = generate_branding_prompt(
@@ -559,49 +674,49 @@ def _run_branding_generation(
                 "tokens": token_usage,
             })
             generated_urls.append(image_url)
+            _persist_job_state(job_id, job)
 
             print(f"  ✓ {label} done ({len(job['images'])}/{total}) - Tokens: {token_usage}")
 
         except Exception as e:
             print(f"  ✗ {label} failed: {e}")
             job["errors"].append({"scenarioId": scenario_id, "label": label, "error": str(e)})
+            _persist_job_state(job_id, job)
 
     job["status"] = "done"
     job["currentScenario"] = None
     job["total_tokens"] = total_tokens
+    _persist_job_state(job_id, job)
     print(f"[Job {job_id}] Branding complete: {len(job['images'])}/{total} images")
     print(f"[Job {job_id}] Total tokens: {total_tokens}")
 
-    # Persist to database
-    if user_id and generated_urls:
-        try:
-            # Prepend original product image URL to result_urls
-            all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
-            
-            Generation.create_generation(
-                user_id=user_id,
-                generation_type="image",
-                category=category_id,
-                prompt=f"Branding: {branding_meta.get('businessName', 'unknown')}",
-                result_urls=all_urls,
-                metadata={
-                    "job_id": job_id,
-                    "scenarios": [s["label"] for s in scenarios],
-                    "total_images": len(generated_urls),
-                    "total_tokens": total_tokens,
-                    "sub_category": "branding",
-                    "model_id": model_id,
-                    "business_name": branding_meta.get("businessName", ""),
-                    "aspect_ratio": branding_meta.get("aspectRatio", "4:5"),
-                    "background": branding_meta.get("backgroundLabel", ""),
-                    "original_product_url": original_product_url,
-                },
-            )
-            print(f"[Job {job_id}] ✅ Branding record saved for user {user_id}")
-        except Exception as e:
-            print(f"[Job {job_id}] ❌ Failed to save branding record: {e}")
-            import traceback
-            traceback.print_exc()
+    try:
+        all_urls = [original_product_url] + generated_urls if original_product_url else generated_urls
+        generations_col.update_one(
+            {"metadata.job_id": job_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "prompt": f"Branding: {branding_meta.get('businessName', 'unknown')}",
+                    "result_urls": all_urls,
+                    "metadata.scenarios": [s["label"] for s in scenarios],
+                    "metadata.total_images": len(generated_urls),
+                    "metadata.total_tokens": total_tokens,
+                    "metadata.sub_category": "branding",
+                    "metadata.model_id": model_id,
+                    "metadata.business_name": branding_meta.get("businessName", ""),
+                    "metadata.aspect_ratio": branding_meta.get("aspectRatio", "4:5"),
+                    "metadata.background": branding_meta.get("backgroundLabel", ""),
+                    "metadata.original_product_url": original_product_url,
+                    "metadata.updated_at": datetime.utcnow(),
+                }
+            }
+        )
+        print(f"[Job {job_id}] ✅ Branding record saved for user {user_id}")
+    except Exception as e:
+        print(f"[Job {job_id}] ❌ Failed to save branding record: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @generate_bp.route("/generate-branding", methods=["POST"])
@@ -673,6 +788,31 @@ def generate_branding_route():
         "categoryId": category_id,
         "userId": user_id,
     }
+
+    Generation.create_generation(
+        user_id=user_id,
+        generation_type="image",
+        category=category_id,
+        prompt=f"Branding: {branding_meta.get('businessName', 'unknown')}",
+        result_urls=[],
+        metadata={
+            "job_id": job_id,
+            "scenarios": [s["label"] for s in scenarios],
+            "scenario_defs": scenarios,
+            "total_images": len(scenarios),
+            "total_tokens": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "sub_category": "branding",
+            "model_id": model_id,
+            "business_name": branding_meta.get("businessName", ""),
+            "aspect_ratio": branding_meta.get("aspectRatio", "4:5"),
+            "background": branding_meta.get("backgroundLabel", ""),
+            "currentScenario": None,
+            "errors": [],
+            "images": [],
+            "updated_at": datetime.utcnow(),
+        },
+        status="generating"
+    )
 
     print(f"[Job {job_id}] Started branding: {len(scenarios)} scenario(s) for '{category_id}' (User: {user_id})")
 

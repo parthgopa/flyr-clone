@@ -34,6 +34,43 @@ export const subcategories: Subcategory[] = [
 
 export const categories = [
   {
+    id: "fashion",
+    title: "Fashion & Clothing",
+    subcategories: subcategories,
+    itemsBySubcategory: {
+      photoshoot: [
+        { id: "f_ps1", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
+        { id: "f_ps2", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
+      ],
+      catalogue: [
+        {
+          id: "f_cat1",
+          thumbnails: [
+            { label: "Side View", image: require("../../assets/jewelry.jpg") },
+            { label: "Sitting", image: require("../../assets/jewelry.jpg") },
+            { label: "Product View", image: require("../../assets/jewelry.jpg") },
+            { label: "Back View", image: require("../../assets/diamond.webp") },
+            { label: "Before", image: require("../../assets/jewelry.jpg") },
+          ],
+        },
+                {
+          id: "f_cat2",
+          thumbnails: [
+            { label: "Side View", image: require("../../assets/jewelry.jpg") },
+            { label: "Sitting", image: require("../../assets/jewelry.jpg") },
+            { label: "Product View", image: require("../../assets/jewelry.jpg") },
+            { label: "Back View", image: require("../../assets/diamond.webp") },
+            { label: "Before", image: require("../../assets/jewelry.jpg") },
+          ],
+        },
+      ],
+      branding: [
+        { id: "f_br1", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
+        { id: "f_br2", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
+      ],
+    },
+  },
+   {
     id: "jewelry",
     title: "Jewelry",
     subcategories: subcategories,
@@ -88,43 +125,6 @@ export const categories = [
           before: require("../../assets/jewelry.jpg"),
           after: require("../../assets/diamond.webp"),
         },
-      ],
-    },
-  },
-  {
-    id: "fashion",
-    title: "Fashion & Clothing",
-    subcategories: subcategories,
-    itemsBySubcategory: {
-      photoshoot: [
-        { id: "f_ps1", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
-        { id: "f_ps2", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
-      ],
-      catalogue: [
-        {
-          id: "f_cat1",
-          thumbnails: [
-            { label: "Side View", image: require("../../assets/jewelry.jpg") },
-            { label: "Sitting", image: require("../../assets/jewelry.jpg") },
-            { label: "Product View", image: require("../../assets/jewelry.jpg") },
-            { label: "Back View", image: require("../../assets/diamond.webp") },
-            { label: "Before", image: require("../../assets/jewelry.jpg") },
-          ],
-        },
-                {
-          id: "f_cat2",
-          thumbnails: [
-            { label: "Side View", image: require("../../assets/jewelry.jpg") },
-            { label: "Sitting", image: require("../../assets/jewelry.jpg") },
-            { label: "Product View", image: require("../../assets/jewelry.jpg") },
-            { label: "Back View", image: require("../../assets/diamond.webp") },
-            { label: "Before", image: require("../../assets/jewelry.jpg") },
-          ],
-        },
-      ],
-      branding: [
-        { id: "f_br1", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
-        { id: "f_br2", before: require("../../assets/jewelry.jpg"), after: require("../../assets/diamond.webp") },
       ],
     },
   },

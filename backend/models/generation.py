@@ -13,7 +13,8 @@ class Generation:
         category: str,
         prompt: str,
         result_urls: list = None,
-        metadata: dict = None
+        metadata: dict = None,
+        status: str = "completed"
     ):
         """
         Create a new generation record
@@ -37,7 +38,7 @@ class Generation:
             "result_urls": result_urls or [],
             "metadata": metadata or {},
             "created_at": datetime.utcnow(),
-            "status": "completed"  # completed, failed, pending
+            "status": status
         }
         
         result = generations_col.insert_one(generation_data)

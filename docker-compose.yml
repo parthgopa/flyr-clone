@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
   flask_app:
-    container_name: flask_backend
+    container_name: flyr
     build: ./backend
     ports:
-      - "5000:5000"
+      - "8000:8000"
     env_file:
       - backend/.env
     volumes:

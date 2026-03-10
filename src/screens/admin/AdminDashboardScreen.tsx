@@ -29,10 +29,12 @@ export default function AdminDashboardScreen({ navigation }: any) {
         input_cost_per_million: 2,
         output_cost_per_million: 12,
         usd_to_inr: 83.5,
+        per_image_cost: 10,
     });
     const [editInputCost, setEditInputCost] = useState("");
     const [editOutputCost, setEditOutputCost] = useState("");
     const [editUsdToInr, setEditUsdToInr] = useState("");
+    const [editPerImageCost, setEditPerImageCost] = useState("");
     const [savingSettings, setSavingSettings] = useState(false);
 
     const loadDashboard = useCallback(async () => {
@@ -46,6 +48,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             setEditInputCost(settings.input_cost_per_million.toString());
             setEditOutputCost(settings.output_cost_per_million.toString());
             setEditUsdToInr(settings.usd_to_inr.toString());
+            setEditPerImageCost((settings.per_image_cost || 10).toString());
         } catch (err) {
             console.error("Dashboard load error:", err);
         } finally {
@@ -67,12 +70,13 @@ export default function AdminDashboardScreen({ navigation }: any) {
         const inputVal = parseFloat(editInputCost);
         const outputVal = parseFloat(editOutputCost);
         const inrVal = parseFloat(editUsdToInr);
+        const perImageVal = parseFloat(editPerImageCost);
 
-        if (isNaN(inputVal) || isNaN(outputVal) || isNaN(inrVal)) {
+        if (isNaN(inputVal) || isNaN(outputVal) || isNaN(inrVal) || isNaN(perImageVal)) {
             Alert.alert("Invalid Input", "Please enter valid numbers for all fields.");
             return;
         }
-        if (inputVal <= 0 || outputVal <= 0 || inrVal <= 0) {
+        if (inputVal <= 0 || outputVal <= 0 || inrVal <= 0 || perImageVal <= 0) {
             Alert.alert("Invalid Input", "All values must be greater than zero.");
             return;
         }
@@ -83,11 +87,13 @@ export default function AdminDashboardScreen({ navigation }: any) {
                 input_cost_per_million: inputVal,
                 output_cost_per_million: outputVal,
                 usd_to_inr: inrVal,
+                per_image_cost: perImageVal,
             });
             setCostSettings({
                 input_cost_per_million: inputVal,
                 output_cost_per_million: outputVal,
                 usd_to_inr: inrVal,
+                per_image_cost: perImageVal,
             });
             Alert.alert("Saved", "Cost settings updated successfully.");
         } catch (err) {
@@ -225,6 +231,23 @@ export default function AdminDashboardScreen({ navigation }: any) {
                                 onChangeText={setEditUsdToInr}
                                 keyboardType="decimal-pad"
                                 placeholder="83.5"
+                                placeholderTextColor={theme.colors.muted}
+                            />
+                        </View>
+
+                        <View style={styles.settingDivider} />
+
+                        <View style={styles.settingRow}>
+                            <View style={styles.settingLabelWrap}>
+                                <Ionicons name="cash-outline" size={16} color="#10B981" />
+                                <AppText style={styles.settingLabel}>Per Image Cost (₹)</AppText>
+                            </View>
+                            <TextInput
+                                style={styles.settingInput}
+                                value={editPerImageCost}
+                                onChangeText={setEditPerImageCost}
+                                keyboardType="decimal-pad"
+                                placeholder="10"
                                 placeholderTextColor={theme.colors.muted}
                             />
                         </View>

@@ -15,6 +15,7 @@ class Config:
     APP_MODELS_COLLECTION = "app_models"
     BRANDING_BG_COLLECTION = "branding_backgrounds"
     PROMPT_TEMPLATES_COLLECTION = "prompt_templates"
+    ADMIN_SETTINGS_COLLECTION = "admin_settings"
 
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this-in-production")

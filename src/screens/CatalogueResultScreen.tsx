@@ -354,11 +354,11 @@ export default function CatalogueResultScreen({ route, navigation }: any) {
               disabled={images.length === 0}
               style={styles.downloadAllButton}
             />
-            <AppButton
+            {/* <AppButton
               title="Try Another"
               onPress={() => navigation.navigate("Home")}
               style={styles.tryAnotherButton}
-            />
+            /> */}
           </View>
         </View>
       )}

@@ -89,21 +89,21 @@ export default function SignupScreen({ navigation }: any) {
       // });
 
       const response = await GoogleSignin.signIn();
-      console.log(response);
+        console.log(response);
 
       // const response = await GoogleSignin.signIn();
 
-      // if (response.type !== "success") {
-      //   throw new Error("Google sign in cancelled");
-      // }
+      if (response.type !== "success") {
+        throw new Error("Google sign in cancelled");
+      }
 
-      // const { idToken } = response.data;
+      const { idToken } = response.data;
 
-      // if (!idToken) {
-      //   throw new Error("No ID token received");
-      // }
+      if (!idToken) {
+        throw new Error("No ID token received");
+      }
 
-      // await googleLogin(idToken);
+      await googleLogin(idToken);
 
     } catch (error: any) {
       console.error("Google sign-in error:", error);

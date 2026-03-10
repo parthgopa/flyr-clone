@@ -1,0 +1,243 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Image, TrendingUp, DollarSign, ArrowUpCircle, ArrowDownCircle, Repeat } from 'lucide-react';
+import { dashboardAPI } from '../services/api';
+import { formatNumber } from '../utils/helpers';
+import Card from '../components/Card';
+import Button from '../components/Button';
+import Loader from '../components/Loader';
+import './Dashboard.css';
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const [costSettings, setCostSettings] = useState({
+    input_cost_per_million: 2,
+    output_cost_per_million: 12,
+    usd_to_inr: 91,
+    per_image_cost: 10,
+  });
+  const [editSettings, setEditSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const [dashData, settings] = await Promise.all([
+        dashboardAPI.getDashboard(),
+        dashboardAPI.getSettings(),
+      ]);
+      setStats(dashData);
+      setCostSettings(settings);
+      setEditSettings(settings);
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await dashboardAPI.updateSettings(editSettings);
+      setCostSettings(editSettings);
+      alert('Settings updated successfully!');
+    } catch (error) {
+      alert('Failed to update settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <Loader fullScreen size="lg" />;
+  }
+
+  return (
+    <div className="dashboard-container">
+      {/* User Stats */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Users</h2>
+        <div className="stats-grid">
+          <StatCard icon={<Users />} label="Total Users" value={stats?.users.total || 0} color="#8B5CF6" />
+          <StatCard icon={<Users />} label="Active Status" value={stats?.users.active || 0} color="#22C55E" />
+          <StatCard icon={<Users />} label="Suspended" value={stats?.users.suspended || 0} color="#EF4444" />
+          <StatCard icon={<Users />} label="New (7d)" value={stats?.users.new_this_week || 0} color="#3B82F6" />
+        </div>
+      </section>
+
+      {/* Generation Stats */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Generations</h2>
+        <div className="stats-grid-2">
+          <StatCard icon={<Image />} label="Total" value={stats?.generations.total || 0} color="#8B5CF6" />
+          <StatCard icon={<TrendingUp />} label="This Month" value={stats?.generations.this_month || 0} color="#8B5CF6" />
+        </div>
+      </section>
+
+      {/* Token Usage */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Token Usage (All Time)</h2>
+        <Card>
+          <div className="token-stats">
+            <div className="token-stat">
+              <div className="token-value">{formatNumber(stats?.tokens.total_tokens || 0)}</div>
+              <div className="token-label">Total Tokens</div>
+            </div>
+            <div className="token-divider"></div>
+            <div className="token-stat">
+              <div className="token-value">{formatNumber(stats?.tokens.total_images || 0)}</div>
+              <div className="token-label">Images</div>
+            </div>
+          </div>
+          <div className="token-breakdown">
+            <div className="token-small">
+              <ArrowUpCircle size={14} color="#22C55E" />
+              <span>Input: {formatNumber(stats?.tokens.total_input_tokens || 0)}</span>
+            </div>
+            <div className="token-small">
+              <ArrowDownCircle size={14} color="#3B82F6" />
+              <span>Output: {formatNumber(stats?.tokens.total_output_tokens || 0)}</span>
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {/* Cost Configuration */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Cost Configuration</h2>
+        <Card>
+          <div className="settings-grid">
+            <div className="setting-row">
+              <div className="setting-label">
+                <ArrowUpCircle size={16} color="#22C55E" />
+                <span>Input Cost ($ / 1M tokens)</span>
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                className="setting-input"
+                value={editSettings.input_cost_per_million}
+                onChange={(e) => setEditSettings({ ...editSettings, input_cost_per_million: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div className="setting-divider"></div>
+
+            <div className="setting-row">
+              <div className="setting-label">
+                <ArrowDownCircle size={16} color="#3B82F6" />
+                <span>Output Cost ($ / 1M tokens)</span>
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                className="setting-input"
+                value={editSettings.output_cost_per_million}
+                onChange={(e) => setEditSettings({ ...editSettings, output_cost_per_million: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div className="setting-divider"></div>
+
+            <div className="setting-row">
+              <div className="setting-label">
+                <Repeat size={16} color="#8B5CF6" />
+                <span>USD → INR Rate</span>
+              </div>
+              <input
+                type="number"
+                step="0.1"
+                className="setting-input"
+                value={editSettings.usd_to_inr}
+                onChange={(e) => setEditSettings({ ...editSettings, usd_to_inr: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div className="setting-divider"></div>
+
+            <div className="setting-row">
+              <div className="setting-label">
+                <DollarSign size={16} color="#10B981" />
+                <span>Per Image Cost (₹)</span>
+              </div>
+              <input
+                type="number"
+                step="1"
+                className="setting-input"
+                value={editSettings.per_image_cost || 10}
+                onChange={(e) => setEditSettings({ ...editSettings, per_image_cost: parseFloat(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <Button
+            variant="primary"
+            fullWidth
+            loading={saving}
+            onClick={handleSaveSettings}
+            style={{ marginTop: '16px' }}
+          >
+            Save Settings
+          </Button>
+        </Card>
+      </section>
+
+      {/* Quick Actions */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Quick Actions</h2>
+        <div className="actions-grid">
+          <ActionCard
+            title="Manage Users"
+            subtitle="View & edit all users"
+            onClick={() => navigate('/users')}
+          />
+          <ActionCard
+            title="Token Analytics"
+            subtitle="Usage breakdown"
+            onClick={() => navigate('/token-stats')}
+          />
+          <ActionCard
+            title="Categories"
+            subtitle="Jewelry, Fashion, etc."
+            onClick={() => navigate('/categories')}
+          />
+          <ActionCard
+            title="App Models"
+            subtitle="AI Characters"
+            onClick={() => navigate('/models')}
+          />
+          <ActionCard
+            title="Backgrounds"
+            subtitle="Branding backgrounds"
+            onClick={() => navigate('/backgrounds')}
+          />
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const StatCard = ({ icon, label, value, color }) => (
+  <Card className="stat-card">
+    <div className="stat-icon" style={{ backgroundColor: `${color}15` }}>
+      {icon && <div style={{ color }}>{icon}</div>}
+    </div>
+    <div className="stat-value">{formatNumber(value)}</div>
+    <div className="stat-label">{label}</div>
+  </Card>
+);
+
+const ActionCard = ({ title, subtitle, onClick }) => (
+  <Card className="action-card" hoverable onClick={onClick}>
+    <div className="action-title">{title}</div>
+    <div className="action-subtitle">{subtitle}</div>
+  </Card>
+);
+
+export default Dashboard;

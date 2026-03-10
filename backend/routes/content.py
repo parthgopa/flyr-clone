@@ -137,7 +137,7 @@ def get_branding_backgrounds():
     for bg in bgs:
         result.append({
             "id": bg["bg_id"],
-            "type": bg["type"],
+            "type": bg.get("type", "color"),
             "label": bg["label"],
             "color": bg.get("color"),
             "image_url": bg.get("image_url"),

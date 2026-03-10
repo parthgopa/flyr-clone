@@ -2,7 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // export const backendURL = 'https://flyr.onewebmart.cloud';
-export const backendURL = 'http://10.73.240.22:5000';
+// export const backendURL = 'http://72.62.79.188:8000';
+export const backendURL = 'http://192.168.1.6:5000';
 
 axios.defaults.timeout = 30000;
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -136,6 +137,17 @@ export async function pollJobStatus(jobId: string) {
     currentScenario: string | null;
     images: { scenarioId: string; label: string; imageUrl: string }[];
     errors: { scenarioId: string; label: string; error: string }[];
+  };
+}
+
+/**
+ * Get app settings like per_image_cost (public endpoint, no auth required)
+ */
+export async function getAppSettings() {
+  const response = await axios.get(`${backendURL}/user/app-settings`);
+  return response.data as {
+    success: boolean;
+    per_image_cost: number;
   };
 }
 

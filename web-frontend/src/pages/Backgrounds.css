@@ -1,0 +1,246 @@
+.backgrounds-container {
+  width: 100%;
+}
+
+.backgrounds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.bg-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.bg-preview-container {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+}
+
+.bg-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bg-preview-color {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--color-border);
+}
+
+.bg-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-elevated);
+}
+
+.bg-info {
+  flex: 1;
+}
+
+.bg-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-black);
+  margin: 0 0 4px 0;
+}
+
+.bg-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-secondary);
+  margin: 0;
+}
+
+.bg-detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  margin: 4px 0 0 0;
+  font-family: 'Courier New', monospace;
+}
+
+.bg-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.bg-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-light);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bg-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+.bg-icon-btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Modal Form */
+.bg-form {
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+
+.form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.form-section-title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-black);
+  margin: 24px 0 12px 0;
+}
+
+.form-section-title:first-child {
+  margin-top: 0;
+}
+
+.form-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-secondary);
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  color: var(--color-black);
+  margin-bottom: 12px;
+  font-family: var(--font-family);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.color-preview-container {
+  margin-bottom: 12px;
+}
+
+.color-preview {
+  width: 100%;
+  height: 80px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.color-preview span {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-black);
+  font-family: 'Courier New', monospace;
+}
+
+.form-divider {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  margin: 16px 0;
+  position: relative;
+}
+
+.form-divider::before,
+.form-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.form-divider::before {
+  left: 0;
+}
+
+.form-divider::after {
+  right: 0;
+}
+
+/* Upload Box for Background */
+.upload-box-bg {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border);
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.upload-label-bg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-muted);
+  gap: 12px;
+  position: relative;
+}
+
+.upload-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-label-bg span {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--color-black);
+  font-size: var(--font-size-sm);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-muted);
+}

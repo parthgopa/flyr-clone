@@ -180,6 +180,7 @@ export interface CostSettings {
     input_cost_per_million: number;
     output_cost_per_million: number;
     usd_to_inr: number;
+    per_image_cost?: number;
 }
 
 export async function fetchCostSettings(): Promise<CostSettings> {

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import AppText from "../components/ui/AppText";
@@ -15,35 +16,45 @@ import PurchaseCancelledModal from "../components/PurchaseCancelledModal";
 import { theme } from "../theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { purchaseProduct, getProducts } from "../services/iapService";
-import { getUserCredits } from "../services/api";
+import { getUserCredits, getAppSettings } from "../services/api";
 
 const DISCRETE_VALUES = [10, 25, 50, 100];
-const COST_PER_IMAGE = 10; // ₹10 per image
 
 export default function BuyMoreImagesScreen({ navigation }: any) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [currentCredits, setCurrentCredits] = useState(0);
+  const [costPerImage, setCostPerImage] = useState(10); // Default ₹10 per image
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCancelledModal, setShowCancelledModal] = useState(false);
   const [purchaseResult, setPurchaseResult] = useState({ creditsAdded: 0, totalCredits: 0 });
 
   const selectedValue = DISCRETE_VALUES[selectedIndex];
-  const totalCost = selectedValue * COST_PER_IMAGE;
+  const totalCost = selectedValue * costPerImage;
 
   useEffect(() => {
-    loadCredits();
+    loadInitialData();
   }, []);
 
-  const loadCredits = async () => {
+  const loadInitialData = async () => {
     try {
-      const response = await getUserCredits();
-      if (response.success) {
-        setCurrentCredits(response.credits);
+      // Fetch both credits and app settings in parallel
+      const [creditsResponse, settingsResponse] = await Promise.all([
+        getUserCredits(),
+        getAppSettings(),
+      ]);
+
+      if (creditsResponse.success) {
+        setCurrentCredits(creditsResponse.credits);
+      }
+
+      if (settingsResponse.success && settingsResponse.per_image_cost) {
+        setCostPerImage(settingsResponse.per_image_cost);
+        console.log(`✓ Loaded per_image_cost: ₹${settingsResponse.per_image_cost}`);
       }
     } catch (error) {
-      console.error("Error loading credits:", error);
+      console.error("Error loading initial data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -155,10 +166,18 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
             <AppText style={styles.selectedValueLabel}>Images</AppText>
           </View>
 
-          {/* Discrete value indicators */}
+          {/* Discrete value indicators - Tap to select */}
           <View style={styles.valuesContainer}>
             {DISCRETE_VALUES.map((value, index) => (
-              <View key={value} style={styles.valueItem}>
+              <TouchableOpacity
+                key={value}
+                style={[
+                  styles.valueItem,
+                  selectedIndex === index && styles.valueItemActive,
+                ]}
+                onPress={() => setSelectedIndex(index)}
+                activeOpacity={0.7}
+              >
                 <AppText
                   style={[
                     styles.valueText,
@@ -167,9 +186,11 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
                 >
                   {value}
                 </AppText>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
+          
+          <AppText style={styles.tapHint}>Tap a number or slide to select</AppText>
 
           {/* Slider */}
           <Slider
@@ -188,8 +209,8 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
         {/* Price Calculation */}
         <View style={styles.calculationCard}>
           <View style={styles.calcRow}>
-            <AppText style={styles.calcLabel}>{selectedValue} Images</AppText>
-            <AppText style={styles.calcValue}>₹{selectedValue * COST_PER_IMAGE}</AppText>
+            <AppText style={styles.calcLabel}>{selectedValue} Images × ₹{costPerImage}</AppText>
+            <AppText style={styles.calcValue}>₹{selectedValue * costPerImage}</AppText>
           </View>
           
           <View style={styles.calcDivider} />
@@ -235,7 +256,7 @@ export default function BuyMoreImagesScreen({ navigation }: any) {
         visible={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          loadCredits(); // Refresh credits
+          loadInitialData(); // Refresh credits
           navigation.goBack();
         }}
         creditsAdded={purchaseResult.creditsAdded}
@@ -302,24 +323,31 @@ const styles = StyleSheet.create({
   },
   sliderSection: {
     marginBottom: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   sectionTitle: {
     ...theme.typography.title,
-    fontSize: 18,
+    fontSize: 20,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     textAlign: "center",
+    fontWeight: "700",
   },
   selectedValueContainer: {
     alignItems: "center",
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   selectedValueNumber: {
     ...theme.typography.hero,
-    fontSize: 28,
+    fontSize: 48,
     color: theme.colors.accent,
     fontWeight: "800",
-    height: 30,
+    lineHeight: 56,
   },
   selectedValueLabel: {
     ...theme.typography.body,
@@ -329,27 +357,42 @@ const styles = StyleSheet.create({
   valuesContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: 8,
   },
   valueItem: {
     alignItems: "center",
+    justifyContent: "center",
     flex: 1,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.xs,
+    borderRadius: theme.radius.sm,
+  },
+  valueItemActive: {
+    backgroundColor: theme.colors.accent + "15",
   },
   valueText: {
-    ...theme.typography.caption,
+    ...theme.typography.body,
     fontWeight: "600",
     color: theme.colors.secondary,
-    fontSize: 12,
+    fontSize: 16,
   },
   valueTextActive: {
     color: theme.colors.accent,
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  tapHint: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+    textAlign: "center",
+    marginBottom: theme.spacing.sm,
+    fontSize: 12,
   },
   slider: {
     width: "100%",
     height: 40,
+    marginHorizontal: -8,
   },
   calculationCard: {
     backgroundColor: theme.colors.surface,

@@ -33,7 +33,7 @@ CATEGORY_SCENARIOS = {
         {
             "id": "travel",
             "label": "Travel",
-            "prompt_hint": "The person is traveling at a scenic destination — airport lounge, train station, or iconic landmark. The outfit should look travel-ready, comfortable yet stylish. Natural daylight."
+            "prompt_hint": "The person is in a professional travel setting — modern airport terminal or business hotel lobby. The person is fully clothed in modest, professional travel attire (business casual or smart casual). Natural indoor lighting. The outfit should look professional, comfortable, and appropriate for business travel."
         },
         # {
         #     "id": "destination",

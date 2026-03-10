@@ -1,11 +1,39 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from bson import ObjectId
-from database import generations_col
+from database import generations_col, admin_settings_col
 from models.user import User
 from utils.auth_middleware import require_auth
 
 user_bp = Blueprint("user", __name__)
+
+
+@user_bp.route("/app-settings", methods=["GET"])
+def get_app_settings():
+    """
+    Public endpoint to get app settings like per_image_cost.
+    No authentication required.
+    """
+    try:
+        doc = admin_settings_col.find_one({"type": "cost_settings"})
+        
+        # Default per_image_cost if not set
+        per_image_cost = 10
+        
+        if doc and "per_image_cost" in doc:
+            per_image_cost = doc.get("per_image_cost", 10)
+        
+        return jsonify({
+            "success": True,
+            "per_image_cost": per_image_cost,
+        })
+    except Exception as e:
+        print(f"Get app settings error: {e}")
+        # Return default on error
+        return jsonify({
+            "success": True,
+            "per_image_cost": 10,
+        })
 
 
 @user_bp.route("/my-generations", methods=["GET"])

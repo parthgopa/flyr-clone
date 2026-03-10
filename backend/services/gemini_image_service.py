@@ -41,16 +41,33 @@ IMPORTANT INSTRUCTIONS:
 - Keep the person's face, pose, body, and background exactly as in the MODEL image.
 - The product should look realistic: correct scale, lighting, shadows, and perspective.
 - Output a single photorealistic image.
+- Ensure the image is appropriate, professional, and suitable for commercial use.
+- The person should be fully clothed in modest, professional attire.
+- Avoid any suggestive poses, revealing clothing, or inappropriate content.
 """),
     ]
 
-    response = client.models.generate_content(
-        model="nano-banana-pro-preview",
-        contents=contents,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE", "TEXT"],
-        ),
-    )
+    try:
+        response = client.models.generate_content(
+            model="nano-banana-pro-preview",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+            ),
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "IMAGE_SAFETY" in error_msg or "finish_reason" in error_msg:
+            raise RuntimeError("Image generation blocked by safety filters. The content may violate safety policies.")
+        raise
+
+    # Check if response was blocked by safety filters
+    if hasattr(response, 'candidates') and response.candidates:
+        candidate = response.candidates[0]
+        if hasattr(candidate, 'finish_reason'):
+            finish_reason = str(candidate.finish_reason)
+            if 'SAFETY' in finish_reason or 'BLOCKED' in finish_reason:
+                raise RuntimeError(f"Image generation blocked: {finish_reason}. Content may violate safety policies.")
 
     # Extract token usage information
     token_usage = {
@@ -65,10 +82,10 @@ IMPORTANT INSTRUCTIONS:
     if hasattr(response, 'usage_metadata') and response.usage_metadata:
         usage = response.usage_metadata
         token_usage = {
-            "input_tokens": usage.prompt_token_count or 0,
-            "output_tokens": usage.candidates_token_count or 0,
-            "total_tokens": usage.total_token_count or 0,
-            "thoughts_tokens": usage.thoughts_token_count or 0,
+            "input_tokens": getattr(usage, 'prompt_token_count', 0) or 0,
+            "output_tokens": getattr(usage, 'candidates_token_count', 0) or 0,
+            "total_tokens": getattr(usage, 'total_token_count', 0) or 0,
+            "thoughts_tokens": getattr(usage, 'thoughts_token_count', 0) or 0,
             "image_tokens": 0,
             "text_tokens": 0
         }
@@ -206,13 +223,27 @@ CRITICAL RULES:
 - Do NOT add speech bubbles, watermarks, or any unrelated elements.
 """))
 
-    response = client.models.generate_content(
-        model="nano-banana-pro-preview",
-        contents=contents,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE", "TEXT"],
-        ),
-    )
+    try:
+        response = client.models.generate_content(
+            model="nano-banana-pro-preview",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+            ),
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "IMAGE_SAFETY" in error_msg or "finish_reason" in error_msg:
+            raise RuntimeError("Branding image generation blocked by safety filters. The content may violate safety policies.")
+        raise
+
+    # Check if response was blocked by safety filters
+    if hasattr(response, 'candidates') and response.candidates:
+        candidate = response.candidates[0]
+        if hasattr(candidate, 'finish_reason'):
+            finish_reason = str(candidate.finish_reason)
+            if 'SAFETY' in finish_reason or 'BLOCKED' in finish_reason:
+                raise RuntimeError(f"Branding image generation blocked: {finish_reason}. Content may violate safety policies.")
 
     # ── Token usage ───────────────────────────────────────────────────────────
     token_usage = {
@@ -227,10 +258,10 @@ CRITICAL RULES:
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         usage = response.usage_metadata
         token_usage = {
-            "input_tokens":    usage.prompt_token_count or 0,
-            "output_tokens":   usage.candidates_token_count or 0,
-            "total_tokens":    usage.total_token_count or 0,
-            "thoughts_tokens": usage.thoughts_token_count or 0,
+            "input_tokens":    getattr(usage, 'prompt_token_count', 0) or 0,
+            "output_tokens":   getattr(usage, 'candidates_token_count', 0) or 0,
+            "total_tokens":    getattr(usage, 'total_token_count', 0) or 0,
+            "thoughts_tokens": getattr(usage, 'thoughts_token_count', 0) or 0,
             "image_tokens":    0,
             "text_tokens":     0,
         }

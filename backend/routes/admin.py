@@ -385,6 +385,7 @@ DEFAULT_SETTINGS = {
     "input_cost_per_million": 2,
     "output_cost_per_million": 12,
     "usd_to_inr": 83.5,
+    "per_image_cost": 10,
 }
 
 
@@ -399,6 +400,7 @@ def get_settings():
                 "input_cost_per_million": doc.get("input_cost_per_million", DEFAULT_SETTINGS["input_cost_per_million"]),
                 "output_cost_per_million": doc.get("output_cost_per_million", DEFAULT_SETTINGS["output_cost_per_million"]),
                 "usd_to_inr": doc.get("usd_to_inr", DEFAULT_SETTINGS["usd_to_inr"]),
+                "per_image_cost": doc.get("per_image_cost", DEFAULT_SETTINGS["per_image_cost"]),
             })
         return jsonify(DEFAULT_SETTINGS)
     except Exception as e:
@@ -409,7 +411,7 @@ def get_settings():
 @admin_bp.route("/settings", methods=["PUT"])
 @require_admin
 def update_settings():
-    """Update cost settings. Body: { input_cost_per_million, output_cost_per_million, usd_to_inr }"""
+    """Update cost settings. Body: { input_cost_per_million, output_cost_per_million, usd_to_inr, per_image_cost }"""
     try:
         data = request.json
         update = {
@@ -417,6 +419,7 @@ def update_settings():
             "input_cost_per_million": float(data.get("input_cost_per_million", DEFAULT_SETTINGS["input_cost_per_million"])),
             "output_cost_per_million": float(data.get("output_cost_per_million", DEFAULT_SETTINGS["output_cost_per_million"])),
             "usd_to_inr": float(data.get("usd_to_inr", DEFAULT_SETTINGS["usd_to_inr"])),
+            "per_image_cost": float(data.get("per_image_cost", DEFAULT_SETTINGS["per_image_cost"])),
             "updated_at": datetime.utcnow(),
         }
         admin_settings_col.update_one(

@@ -151,14 +151,30 @@ def verify_purchase():
         print(f"✅ Product ID is valid")
         
         # Check if purchase token was already processed (prevent replay attacks)
+        # CRITICAL: Check for both 'success' AND 'pending' to prevent race conditions
         print(f"🔍 Checking for duplicate purchase token...")
         existing_transaction = Transaction.find_by_purchase_token(purchase_token)
         if existing_transaction:
-            if existing_transaction.get("status") == "success":
-                print(f"⚠️  Purchase already processed: {existing_transaction['_id']}")
+            status = existing_transaction.get("status")
+            if status == "success":
+                print(f"⚠️  Purchase already processed (success): {existing_transaction['_id']}")
+                # Return the existing successful transaction details
+                user_credits = User.get_credits(user_id)
+                return jsonify({
+                    "success": True,
+                    "message": "Purchase already processed",
+                    "credits_added": existing_transaction.get("credits", 0),
+                    "total_credits": user_credits,
+                    "transaction_id": str(existing_transaction["_id"]),
+                    "duplicate": True
+                }), 200
+            elif status == "pending":
+                print(f"⚠️  Purchase already being processed (pending): {existing_transaction['_id']}")
+                print(f"⏳ Waiting for other request to complete...")
+                # Return 409 to indicate duplicate request in progress
                 return jsonify({
                     "success": False,
-                    "message": "Purchase already processed",
+                    "message": "Purchase verification already in progress",
                     "transaction_id": str(existing_transaction["_id"])
                 }), 409
         

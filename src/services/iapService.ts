@@ -85,6 +85,9 @@ const markPurchaseAsProcessed = async (purchaseToken: string) => {
 // Store for pending purchase promises
 const pendingPurchases = new Map<string, { resolve: Function; reject: Function }>();
 
+// Track in-progress verifications to prevent duplicates
+const inProgressVerifications = new Set<string>();
+
 // Purchase a product (initiates purchase, actual verification handled by listener)
 export const purchaseProduct = async (productId: string): Promise<any> => {
   return new Promise(async (resolve, reject) => {
@@ -281,6 +284,16 @@ export const setupPurchaseListener = (
           return;
         }
         
+        // Check if verification is already in progress (prevent race condition)
+        if (inProgressVerifications.has(purchaseToken)) {
+          console.log('⚠️  Verification already in progress for this purchase, skipping duplicate');
+          console.log('='.repeat(60) + '\n');
+          return;
+        }
+        
+        // Mark as in-progress
+        inProgressVerifications.add(purchaseToken);
+        
         console.log('\n🔐 Verifying purchase with backend...');
         
         // Verify with backend
@@ -295,6 +308,9 @@ export const setupPurchaseListener = (
           console.log('\n✅ BACKEND VERIFICATION SUCCESS');
           console.log('💰 Credits Added:', verificationResult.credits_added);
           console.log('🏦 Total Credits:', verificationResult.total_credits);
+          
+          // Remove from in-progress set
+          inProgressVerifications.delete(purchaseToken);
           
           // Mark as processed
           await markPurchaseAsProcessed(purchaseToken);
@@ -323,6 +339,9 @@ export const setupPurchaseListener = (
           console.log('Error:', verificationResult.message);
           console.log('⚠️  NOT consuming purchase - will retry on next app start');
           console.log('='.repeat(60) + '\n');
+          
+          // Remove from in-progress set
+          inProgressVerifications.delete(purchaseToken);
           
           const result = {
             success: false,

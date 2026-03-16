@@ -1,5 +1,5 @@
 import { View, Image, StyleSheet, Alert, ScrollView } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { Asset } from "expo-asset";
 import { imageUriToBase64 } from "../utils/imageToBase64";
@@ -15,7 +15,7 @@ import { theme } from "../theme/theme";
 import { startGenerationJob } from "../services/api";
 
 export default function UploadScreen({ navigation, route }: any) {
-  const { categoryId, model, customModelImage } = route.params;
+  const { categoryId, model, customModelImage, showcaseItem } = route.params;
   // console.log("category id:", categoryId);
   console.log("model:", model);
   // console.log("custom model image:", customModelImage);
@@ -24,6 +24,14 @@ export default function UploadScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(false);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
+
+  // Pre-select showcase image if available
+  useEffect(() => {
+    if (showcaseItem?.before_url && !productImage) {
+      // Use the 'before' image from showcase as default product image
+      setProductImage(showcaseItem.before_url);
+    }
+  }, [showcaseItem]);
 
   /* ---------------- IMAGE PICKERS ---------------- */
 

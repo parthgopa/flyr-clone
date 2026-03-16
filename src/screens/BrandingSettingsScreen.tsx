@@ -49,8 +49,8 @@ interface Props {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function BrandingSettingsScreen({ navigation, route }: Props) {
-    const { categoryId, modelId, modelName, selectedPose } = route.params;
+export default function BrandingSettingsScreen({ navigation, route }: any) {
+    const { categoryId, modelId, modelName, selectedPose, showcaseItem } = route.params;
 
     // Business details
     const [logoUri, setLogoUri] = useState<string | null>(null);
@@ -121,6 +121,7 @@ export default function BrandingSettingsScreen({ navigation, route }: Props) {
                 background: selectedBg,
                 aspectRatio: selectedRatio,
             },
+            showcaseItem,
         });
     };
 

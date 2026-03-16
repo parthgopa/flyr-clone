@@ -1,5 +1,6 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, make_response
 from flask_cors import CORS
+from flask_compress import Compress
 from routes.generate import generate_bp
 from routes.auth import auth_bp
 from routes.video import video_bp
@@ -11,13 +12,23 @@ from routes.purchase import purchase_bp
 import os
 
 app = Flask(__name__)
+
+# Enable gzip compression for all responses
+Compress(app)
+
 CORS(
     app,
     resources={r"/*": {"origins": "*"}},
     supports_credentials=True
 )
 
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+app.config["COMPRESS_MIMETYPES"] = [
+    'text/html', 'text/css', 'text/xml', 'application/json',
+    'application/javascript', 'image/jpeg', 'image/png', 'image/jpg'
+]
+app.config["COMPRESS_LEVEL"] = 6  # Compression level 1-9
+app.config["COMPRESS_MIN_SIZE"] = 500  # Only compress files > 500 bytes  
 
 
 app.register_blueprint(generate_bp, url_prefix="/generate")
@@ -31,7 +42,17 @@ app.register_blueprint(purchase_bp, url_prefix="/purchase")
 
 @app.route("/uploads/<path:filename>")
 def serve_image(filename):
-    return send_from_directory("uploads", filename)
+    """Serve images with aggressive caching headers for performance"""
+    response = make_response(send_from_directory("uploads", filename))
+    
+    # Aggressive caching - 1 year for immutable images
+    response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    response.headers['Expires'] = '31536000'
+    
+    # Enable compression hint
+    response.headers['Vary'] = 'Accept-Encoding'
+    
+    return response
 
 @app.route("/")
 def health():

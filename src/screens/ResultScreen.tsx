@@ -25,7 +25,7 @@ import { theme } from "../theme/theme";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 1.05, SCREEN_HEIGHT * 0.55);
-const POLL_INTERVAL = 6000;
+const POLL_INTERVAL = 4000;
 
 // Helper function to prepend backend URL to image URLs
 const getFullImageUrl = (imageUrl: string) => {

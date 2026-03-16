@@ -13,7 +13,7 @@ import { theme } from "../theme/theme";
 import AppText from "../components/ui/AppText";
 
 export default function ModelSelectionScreen({ navigation, route }: any) {
-  const { categoryId } = route.params;
+  const { categoryId, showcaseItem } = route.params;
 
   const [models, setModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +66,7 @@ export default function ModelSelectionScreen({ navigation, route }: any) {
       categoryId,
       model: selectedModel,
       customModelImage,
+      showcaseItem,
     });
   };
 
@@ -79,7 +80,7 @@ export default function ModelSelectionScreen({ navigation, route }: any) {
     );
   }
 
-  const modelData = [...models, { id: "custom_upload" }] as any[];
+  const modelsWithExtra = [...models, { id: "custom_upload" }] as any[];
 
   return (
     <View style={styles.container}>
@@ -89,18 +90,14 @@ export default function ModelSelectionScreen({ navigation, route }: any) {
       />
 
       <FlatList
-        data={modelData}
-        numColumns={2}
+        data={modelsWithExtra}
         keyExtractor={(item) => item.id}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           if (item.id === "custom_upload") {
             return (
               <UploadModelCard
-                selected={selectedModel?.id === "custom"}
                 onPress={pickCustomModel}
+                selected={selectedModel?.id === "custom"}
               />
             );
           }
@@ -117,6 +114,15 @@ export default function ModelSelectionScreen({ navigation, route }: any) {
             />
           );
         }}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        initialNumToRender={4}
+        updateCellsBatchingPeriod={50}
       />
 
       {customModelImage && (
@@ -145,8 +151,8 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
   },
   row: {
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
   },
   customModelPreview: {
     marginHorizontal: theme.spacing.screenPadding,

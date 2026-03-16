@@ -1,5 +1,5 @@
 import { View, Image, StyleSheet, Alert, ScrollView } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { Asset } from "expo-asset";
 import { imageUriToBase64 } from "../utils/imageToBase64";
@@ -19,12 +19,20 @@ interface Props {
 }
 
 export default function BrandingUploadScreen({ navigation, route }: Props) {
-    const { categoryId, modelId, modelName, selectedPose, brandingSettings } = route.params;
+    const { categoryId, modelId, modelName, selectedPose, brandingSettings, showcaseItem } = route.params;
 
     const [productImage, setProductImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showCreditsModal, setShowCreditsModal] = useState(false);
     const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
+
+    // Pre-select showcase image if available
+    useEffect(() => {
+        if (showcaseItem?.before_url && !productImage) {
+            // Use the 'before' image from showcase as default product image
+            setProductImage(showcaseItem.before_url);
+        }
+    }, [showcaseItem]);
 
     /* ── Image Pickers ───────────────────────────────────────────────────────── */
 

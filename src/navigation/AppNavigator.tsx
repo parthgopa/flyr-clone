@@ -13,6 +13,7 @@ import CategoryScreen from "../screens/CategoryScreen";
 import ModelSelectionScreen from "../screens/ModelSelectionScreen";
 import CatalogueMainModelSelectionScreen from "../screens/CatalogueMainModelSelectionScreen";
 import CatalogueModelSelectionScreen from "../screens/CatalogueModelSelectionScreen";
+import CatalogueBackgroundSelectionScreen from "../screens/CatalogueBackgroundSelectionScreen";
 import CatalogueUploadScreen from "../screens/CatalogueUploadScreen";
 import CatalogueResultScreen from "../screens/CatalogueResultScreen";
 import ResultScreen from "../screens/ResultScreen";
@@ -91,6 +92,7 @@ export default function AppNavigator() {
           <Stack.Screen name="ModelSelection" component={ModelSelectionScreen} />
           <Stack.Screen name="CatalogueMainModelSelection" component={CatalogueMainModelSelectionScreen} />
           <Stack.Screen name="CataloguePhotoSelection" component={CatalogueModelSelectionScreen} />
+          <Stack.Screen name="CatalogueBackgroundSelection" component={CatalogueBackgroundSelectionScreen} />
           <Stack.Screen name="CatalogueUpload" component={CatalogueUploadScreen} />
           <Stack.Screen name="CatalogueResult" component={CatalogueResultScreen} />
           <Stack.Screen name="Upload" component={UploadScreen} />

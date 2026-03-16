@@ -22,7 +22,7 @@ export default function CategoryCard({
   after,
   onPress,
 }: Props) {
-  const [showBefore, setShowBefore] = useState(true);
+  const [showBefore, setShowBefore] = useState(false);
   const currentRaw = showBefore ? before : after;
   const currentImage = typeof currentRaw === "string" ? { uri: currentRaw } : currentRaw;
   const currentLabel = showBefore ? "Before" : "After";
@@ -94,9 +94,10 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 300,
+    aspectRatio: 1,
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.surfaceElevated,
+    resizeMode: "contain",
   },
   badge: {
     position: "absolute",

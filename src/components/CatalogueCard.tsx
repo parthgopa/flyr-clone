@@ -130,9 +130,10 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 220,
+    aspectRatio: 1,
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.surfaceElevated,
+    resizeMode: "contain",
   },
   badge: {
     position: "absolute",

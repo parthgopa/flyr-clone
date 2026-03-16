@@ -16,11 +16,30 @@ _CATEGORY_KEY_MAP = {
 }
 
 
-def _generate_catalogue_prompt_hardcoded(category_id: str, model_pose: str, product_description: str = "") -> str:
+def _build_background_block(bg_color: str | None, bg_label: str) -> str:
+    """Build background instruction block for catalogue prompts"""
+    if bg_color:
+        return (
+            f"BACKGROUND — fill with a perfectly uniform solid color (hex: {bg_color}, label: {bg_label}). "
+            "The background must be completely clean — no gradients, vignettes, noise, or texture. "
+            "Product and model shadows should cast softly onto this background at a believable angle. "
+            "Ensure color accuracy: the rendered background hex must match the specified value."
+        )
+    else:
+        return (
+            f"BACKGROUND — apply a clean {bg_label} studio background. "
+            "It should feel premium and professional with soft shadow falloff at the base of the model."
+        )
+
+
+def _generate_catalogue_prompt_hardcoded(category_id: str, model_pose: str, product_description: str = "", bg_color: str = None, bg_label: str = "White") -> str:
     """
     Generate highly accurate prompts for catalogue images based on category
     Maintains the original model pose/style (side view, back view, etc.) without changes
     """
+    
+    # Build background block
+    bg_block = _build_background_block(bg_color, bg_label)
     
     category_prompts = {
         # Jewelry Category
@@ -33,11 +52,7 @@ def _generate_catalogue_prompt_hardcoded(category_id: str, model_pose: str, prod
         - Maintain the exact {model_pose} pose - DO NOT change the angle or positioning
         - Model should have graceful, elegant posture suitable for jewelry showcase
         
-        BACKGROUND REQUIREMENTS:
-        - Authentic Indian wedding hall or ancient temple setting
-        - Rich architectural elements with intricate carvings
-        - Soft, warm golden lighting reminiscent of wedding ceremonies
-        - Traditional Indian decor elements like marigold flowers, diyas, or mandap patterns
+        {bg_block}
         
         PRODUCT REQUIREMENTS:
         - The jewelry should be clearly visible and properly displayed
@@ -338,19 +353,21 @@ def get_category_specific_requirements(category_id: str) -> dict:
     })
 
 
-def generate_catalogue_prompt(category_id: str, model_pose: str, product_description: str = "") -> str:
+def generate_catalogue_prompt(category_id: str, model_pose: str, product_description: str = "", bg_color: str = None, bg_label: str = "White") -> str:
     """
     Public API: try DB first, fallback to hardcoded prompts.
-    The DB stores templates with {model_pose} placeholder.
+    The DB stores templates with {model_pose} and {bg_block} placeholders.
     """
+    bg_block = _build_background_block(bg_color, bg_label)
+    
     try:
         cat = categories_col.find_one({"category_id": category_id})
         if cat and cat.get("prompts", {}).get("catalogue"):
             template = cat["prompts"]["catalogue"]
-            return template.replace("{model_pose}", model_pose).strip()
+            return template.replace("{model_pose}", model_pose).replace("{bg_block}", bg_block).strip()
     except Exception as e:
         print(f"⚠ DB catalogue prompt fetch failed, using fallback: {e}")
 
     # Map frontend category_id to catalogue prompt key
     mapped_id = _CATEGORY_KEY_MAP.get(category_id, category_id)
-    return _generate_catalogue_prompt_hardcoded(mapped_id, model_pose, product_description)
+    return _generate_catalogue_prompt_hardcoded(mapped_id, model_pose, product_description, bg_color, bg_label)

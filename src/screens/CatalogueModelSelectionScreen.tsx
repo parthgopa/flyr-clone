@@ -31,7 +31,7 @@ interface PhotoItem {
 }
 
 export default function CatalogueModelSelectionScreen({ navigation, route }: Props) {
-  const { categoryId, modelId, modelName } = route.params;
+  const { categoryId, modelId, modelName, showcaseItem } = route.params;
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [showAllModelViews, setShowAllModelViews] = useState(false);
   const [allModelPhotos, setAllModelPhotos] = useState<PhotoItem[]>([]);
@@ -86,11 +86,12 @@ export default function CatalogueModelSelectionScreen({ navigation, route }: Pro
 
     const selectedModelPhotos = allModelPhotos.filter(photo => selectedPhotos.includes(photo.id));
 
-    // Navigate to catalogue upload screen with selected photos
-    navigation.navigate("CatalogueUpload", {
+    // Navigate to background selection screen with selected photos
+    navigation.navigate("CatalogueBackgroundSelection", {
       categoryId,
       selectedModels: selectedModelPhotos,
       modelName,
+      showcaseItem,
     });
   };
 
@@ -135,11 +136,15 @@ export default function CatalogueModelSelectionScreen({ navigation, route }: Pro
           <AppText style={styles.sectionTitle}>Model Views</AppText>
           <FlatList
             data={displayedModelViews}
-            renderItem={renderPhoto}
             keyExtractor={(item) => item.id}
             numColumns={3}
             scrollEnabled={false}
-            columnWrapperStyle={styles.photoRow}
+            renderItem={renderPhoto}
+            columnWrapperStyle={styles.photoGrid}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={6}
+            windowSize={5}
+            initialNumToRender={6}
           />
 
           {modelViewPhotos.length > 6 && (
@@ -294,6 +299,14 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     marginTop: theme.spacing.xs,
     fontStyle: "italic",
+  },
+  sectionSubtitle: {
+    ...theme.typography.body,
+    color: theme.colors.secondary,
+  },
+  photoGrid: {
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.sm,
   },
   footer: {
     padding: theme.spacing.screenPadding,

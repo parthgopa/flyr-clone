@@ -1,5 +1,7 @@
 // Backend API Configuration
-export const API_BASE_URL = 'http://10.73.240.22:5000';
+// export const API_BASE_URL = 'http://192.168.1.6:5000';
+export const API_BASE_URL = 'http://72.62.79.188:8001';
+
 
 export const API_ENDPOINTS = {
   // Auth

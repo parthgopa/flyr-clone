@@ -54,6 +54,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   list: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
   },
 });

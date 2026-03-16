@@ -173,21 +173,24 @@ export default function HomeScreen({ navigation }: any) {
           <CategorySection
             title={item.title}
             items={(item.showcase_items as any)?.[selectedSubcategory] || []}
-            onTry={() => {
+            onTry={(showcaseItem: any) => {
               if (selectedSubcategory === "catalogue") {
                 navigation.navigate("CatalogueMainModelSelection", {
                   categoryId: item.id,
                   subcategoryType: selectedSubcategory,
+                  showcaseItem,
                 });
               } else if (selectedSubcategory === "branding") {
                 navigation.navigate("BrandingMainModelSelection", {
                   categoryId: item.id,
                   subcategoryType: selectedSubcategory,
+                  showcaseItem,
                 });
               } else {
                 navigation.navigate("ModelSelection", {
                   categoryId: item.id,
                   subcategoryType: selectedSubcategory,
+                  showcaseItem,
                 });
               }
             }}
@@ -265,6 +268,7 @@ const styles = StyleSheet.create({
   sections: {
     padding: theme.spacing.screenPadding,
     paddingTop: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   subcategoryContainer: {
     paddingHorizontal: theme.spacing.sm,

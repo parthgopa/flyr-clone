@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function BrandingPoseSelectionScreen({ navigation, route }: Props) {
-    const { categoryId, modelId, modelName } = route.params;
+    const { categoryId, modelId, modelName, showcaseItem } = route.params;
     const [selectedPoseId, setSelectedPoseId] = useState<string | null>(null);
     const [poses, setPoses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -60,6 +60,7 @@ export default function BrandingPoseSelectionScreen({ navigation, route }: Props
             modelId,
             modelName,
             selectedPose,
+            showcaseItem,
         });
     };
 

@@ -1,13 +1,46 @@
 version: "3.9"
 
 services:
+  # Frontend Service (Admin Panel at /admin)
+  frontend:
+    container_name: flyr-frontend
+    build:
+      context: ./web-frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3001:3000"
+    networks:
+      - n8n_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flyr-admin.rule=Host(`flyr.onewebmart.cloud`) && PathPrefix(`/admin`)"
+      - "traefik.http.routers.flyr-admin.entrypoints=web,websecure"
+      - "traefik.http.services.flyr-admin.loadbalancer.server.port=3000"
+      - "traefik.http.routers.flyr-admin.priority=100"
+      - "traefik.http.middlewares.flyr-admin-strip.stripprefix.prefixes=/admin"
+      - "traefik.http.routers.flyr-admin.middlewares=flyr-admin-strip"
+
+  # Flask Backend (API at root)
   flask_app:
     container_name: flyr
     build: ./backend
+    restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    networks:
+      - n8n_default
     env_file:
       - backend/.env
     volumes:
       - ./backend/uploads:/app/uploads
-    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flyr-backend.rule=Host(`flyr.onewebmart.cloud`) && !PathPrefix(`/admin`)"
+      - "traefik.http.routers.flyr-backend.entrypoints=web,websecure"
+      - "traefik.http.services.flyr-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.flyr-backend.priority=50"
+
+networks:
+  n8n_default:
+    external: true

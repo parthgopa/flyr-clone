@@ -24,7 +24,7 @@ interface Props {
 }
 
 export default function CatalogueMainModelSelectionScreen({ navigation, route }: Props) {
-  const { categoryId } = route.params;
+  const { categoryId, showcaseItem } = route.params;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +82,7 @@ export default function CatalogueMainModelSelectionScreen({ navigation, route }:
       categoryId,
       modelId: selectedModel,
       modelName: selectedModelData?.name,
+      showcaseItem,
     });
   };
 
@@ -126,8 +127,14 @@ export default function CatalogueMainModelSelectionScreen({ navigation, route }:
             data={availableModels}
             renderItem={renderModel}
             keyExtractor={(item) => item.id}
+            numColumns={2}
             scrollEnabled={false}
-            contentContainerStyle={styles.modelList}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.grid}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={4}
+            windowSize={5}
+            initialNumToRender={4}
           />
         </View>
       </ScrollView>
@@ -167,11 +174,19 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     marginBottom: theme.spacing.lg,
   },
+  row: {
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
+  },
+  grid: {
+    paddingBottom: theme.spacing.xl,
+  },
   modelList: {
     gap: theme.spacing.md,
   },
   modelContainer: {
-    flexDirection: "row",
+    width: "48%",
+    flexDirection: "column",
     alignItems: "center",
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
@@ -185,25 +200,28 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   modelImage: {
-    width: 80,
-    height: 80,
+    width: "100%",
+    aspectRatio: 0.8,
     borderRadius: theme.radius.md,
     resizeMode: "cover",
-    marginRight: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   modelInfo: {
-    flex: 1,
+    width: "100%",
+    alignItems: "center",
   },
   modelName: {
     ...theme.typography.title,
-    fontSize: 16,
+    fontSize: 14,
     color: theme.colors.primary,
     marginBottom: theme.spacing.xs,
+    textAlign: "center",
   },
   modelStatus: {
     ...theme.typography.caption,
     color: theme.colors.secondary,
     fontStyle: "italic",
+    textAlign: "center",
   },
   selectionOverlay: {
     position: "absolute",

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
     View,
     StyleSheet,
-    ScrollView,
+    FlatList,
     TouchableOpacity,
     Alert,
     ActivityIndicator,
@@ -11,6 +11,8 @@ import {
     Modal,
     Dimensions,
     Linking,
+    ToastAndroid,
+    Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { File, Paths } from "expo-file-system/next";
@@ -67,8 +69,16 @@ export default function UserHistoryScreen({ navigation }: any) {
 
     // ── Image actions ─────────────────────────────────────────────────────────
     const openImageViewer = (url: string) => {
-        setViewerImageUrl(url);
-        setImageViewerVisible(true);
+        console.log('Opening image viewer with URL:', url);
+        if (url && url.trim()) {
+            setViewerImageUrl(url);
+            setImageViewerVisible(true);
+        } else {
+            console.error('Invalid image URL');
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('Cannot open image', ToastAndroid.SHORT);
+            }
+        }
     };
 
     const downloadImage = async (url: string) => {
@@ -106,10 +116,23 @@ export default function UserHistoryScreen({ navigation }: any) {
                 reader.readAsDataURL(blob);
             });
 
-            Alert.alert("Downloaded", "Image saved to gallery.");
+            // WhatsApp-style toast notification
+            if (Platform.OS === 'android') {
+                ToastAndroid.showWithGravity(
+                    '✓ Image saved to gallery',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.BOTTOM
+                );
+            } else {
+                Alert.alert("✓ Downloaded", "Image saved to gallery.");
+            }
         } catch (err) {
             console.error("Download error:", err);
-            Alert.alert("Error", "Failed to download image.");
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('✗ Download failed', ToastAndroid.SHORT);
+            } else {
+                Alert.alert("Error", "Failed to download image.");
+            }
         }
     };
 
@@ -129,48 +152,36 @@ export default function UserHistoryScreen({ navigation }: any) {
         <View style={styles.container}>
             <AppHeader title="My Creations" onBack={() => navigation.goBack()} />
 
-            <ScrollView
+            <FlatList
+                data={generations}
+                keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {/* Info banner */}
-                {/* <View style={styles.infoBanner}>
-                    <Ionicons name="time-outline" size={16} color={theme.colors.accent} />
-                    <AppText style={styles.infoBannerText}>
-                        Showing creations from the last 30 days
-                    </AppText>
-                </View> */}
-
-                {/* Category Filters */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterScroll}
-                >
-                    <TouchableOpacity
-                        style={[styles.filterChip, filterCategory === "all" && styles.filterChipActive]}
-                        onPress={() => setFilterCategory("all")}
-                    >
-                        <AppText style={[styles.filterChipText, filterCategory === "all" && styles.filterChipTextActive]}>
-                            All ({generations.length})
-                        </AppText>
-                    </TouchableOpacity>
-                    {categories.map((cat) => (
-                        <TouchableOpacity
-                            key={cat}
-                            style={[styles.filterChip, filterCategory === cat && styles.filterChipActive]}
-                            onPress={() => setFilterCategory(cat)}
-                        >
-                            <AppText style={[styles.filterChipText, filterCategory === cat && styles.filterChipTextActive]}>
-                                {cat}
-                            </AppText>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-
-                {/* Generation List */}
-                {generations.length === 0 ? (
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={5}
+                windowSize={10}
+                initialNumToRender={5}
+                ListHeaderComponent={
+                    <FlatList
+                        data={["all", ...categories]}
+                        keyExtractor={(item) => item}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.filterScroll}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={[styles.filterChip, filterCategory === item && styles.filterChipActive]}
+                                onPress={() => setFilterCategory(item)}
+                            >
+                                <AppText style={[styles.filterChipText, filterCategory === item && styles.filterChipTextActive]}>
+                                    {item === "all" ? `All (${generations.length})` : item}
+                                </AppText>
+                            </TouchableOpacity>
+                        )}
+                    />
+                }
+                ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <Ionicons name="images-outline" size={48} color={theme.colors.muted} />
                         <AppText style={styles.emptyTitle}>No creations yet</AppText>
@@ -178,74 +189,64 @@ export default function UserHistoryScreen({ navigation }: any) {
                             Your generated images from the last 30 days will appear here
                         </AppText>
                     </View>
-                ) : (
-                    generations.map((g) => (
-                        <View key={g.id} style={styles.genCard}>
-                            {/* Header */}
-                            <View style={styles.genHeader}>
-                                <View style={styles.genCategoryBadge}>
-                                    <AppText style={styles.genCategoryText}>{g.category}</AppText>
-                                </View>
-                                {g.sub_category ? (
-                                    <View style={[styles.genCategoryBadge, { backgroundColor: "#3B82F620" }]}>
-                                        <AppText style={[styles.genCategoryText, { color: "#3B82F6" }]}>
-                                            {g.sub_category}
-                                        </AppText>
-                                    </View>
-                                ) : null}
-                                <View style={{ flex: 1 }} />
-                                <AppText style={styles.genDate}>
-                                    {g.created_at ? new Date(g.created_at).toLocaleDateString("en-IN", {
-                                        day: "2-digit", month: "short",
-                                    }) : "—"}
-                                </AppText>
+                }
+                renderItem={({ item: g }) => (
+                    <View style={styles.genCard}>
+                        {/* Header */}
+                        <View style={styles.genHeader}>
+                            <View style={styles.genCategoryBadge}>
+                                <AppText style={styles.genCategoryText}>{g.category}</AppText>
                             </View>
-
-                            {/* Images count */}
-                            <View style={styles.genMeta}>
-                                {/* <Ionicons name="images-outline" size={14} color={theme.colors.secondary} /> */}
-                                {/* <AppText style={styles.genMetaText}>
-                                    {g.total_images} image{g.total_images !== 1 ? "s" : ""}
-                                </AppText> */}
-                                {/* <View style={[
-                                    styles.genStatus,
-                                    g.status === "completed" ? styles.genComplete : styles.genFailed,
-                                ]}>
-                                    <AppText style={[styles.genStatusText, {
-                                        color: g.status === "completed" ? theme.colors.success : theme.colors.error,
-                                    }]}>
-                                        {g.status}
+                            {g.sub_category ? (
+                                <View style={[styles.genCategoryBadge, { backgroundColor: "#3B82F620" }]}>
+                                    <AppText style={[styles.genCategoryText, { color: "#3B82F6" }]}>
+                                        {g.sub_category}
                                     </AppText>
-                                </View> */}
-                            </View>
-
-                            {/* Image thumbnails */}
-                            {g.result_urls.length > 0 && (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbScroll}>
-                                    {g.result_urls.map((url, idx) => {
-                                        const fullUrl = `${backendURL}/${url}`;
-                                        return (
-                                            <View key={idx} style={styles.thumbContainer}>
-                                                <TouchableOpacity onPress={() => openImageViewer(fullUrl)} activeOpacity={0.85}>
-                                                    <Image source={{ uri: fullUrl }} style={styles.thumb} />
-                                                </TouchableOpacity>
-                                                <View style={styles.thumbActions}>
-                                                    <TouchableOpacity style={styles.thumbBtn} onPress={() => downloadImage(fullUrl)}>
-                                                        <Ionicons name="download-outline" size={12} color={theme.colors.accent} />
-                                                    </TouchableOpacity>
-                                                    <TouchableOpacity style={styles.thumbBtn} onPress={() => openImageExternal(fullUrl)}>
-                                                        <Ionicons name="open-outline" size={12} color={theme.colors.accent} />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            </View>
-                                        );
-                                    })}
-                                </ScrollView>
-                            )}
+                                </View>
+                            ) : null}
+                            <View style={{ flex: 1 }} />
+                            <AppText style={styles.genDate}>
+                                {g.created_at ? new Date(g.created_at).toLocaleDateString("en-IN", {
+                                    day: "2-digit", month: "short",
+                                }) : "—"}
+                            </AppText>
                         </View>
-                    ))
+
+                        {/* Image thumbnails */}
+                        {g.result_urls.length > 0 && (
+                            <FlatList
+                                data={g.result_urls}
+                                keyExtractor={(url, idx) => `${g.id}-${idx}`}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.thumbScroll}
+                                renderItem={({ item: url, index: idx }) => {
+                                    const fullUrl = `${backendURL}/${url}`;
+                                    return (
+                                        <View style={styles.thumbContainer}>
+                                            <TouchableOpacity onPress={() => openImageViewer(fullUrl)} activeOpacity={0.85}>
+                                                <Image 
+                                                    source={{ uri: fullUrl }} 
+                                                    style={styles.thumb}
+                                                    resizeMode="cover"
+                                                />
+                                            </TouchableOpacity>
+                                            <View style={styles.thumbActions}>
+                                                <TouchableOpacity style={styles.thumbBtn} onPress={() => downloadImage(fullUrl)}>
+                                                    <Ionicons name="download-outline" size={12} color={theme.colors.accent} />
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.thumbBtn} onPress={() => openImageExternal(fullUrl)}>
+                                                    <Ionicons name="open-outline" size={12} color={theme.colors.accent} />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    );
+                                }}
+                            />
+                        )}
+                    </View>
                 )}
-            </ScrollView>
+            />
 
             {/* ═══════════════════════════════════════════════════════════════════
                  FULL-SCREEN IMAGE VIEWER
@@ -261,7 +262,18 @@ export default function UserHistoryScreen({ navigation }: any) {
                         <Ionicons name="close" size={28} color="#FFF" />
                     </TouchableOpacity>
 
-                    <Image source={{ uri: viewerImageUrl }} style={styles.viewerImage} resizeMode="contain" />
+                    {viewerImageUrl ? (
+                        <Image 
+                            source={{ uri: viewerImageUrl }} 
+                            style={styles.viewerImage} 
+                            resizeMode="contain"
+                            onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
+                        />
+                    ) : (
+                        <View style={styles.viewerImage}>
+                            <AppText style={{ color: '#FFF' }}>Image not available</AppText>
+                        </View>
+                    )}
 
                     <View style={styles.viewerActions}>
                         <TouchableOpacity style={styles.viewerBtn} onPress={() => downloadImage(viewerImageUrl)}>
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
     genCard: {
         backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
         borderWidth: 1, borderColor: theme.colors.border,
-        padding: theme.spacing.md, marginBottom: theme.spacing.sm, gap: theme.spacing.xs,
+        padding: theme.spacing.md, marginBottom: theme.spacing.md, gap: theme.spacing.xs,
     },
     genHeader: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
     genCategoryBadge: {
@@ -333,7 +345,7 @@ const styles = StyleSheet.create({
     thumbScroll: { marginTop: theme.spacing.sm },
     thumbContainer: { marginRight: 10, alignItems: "center" },
     thumb: {
-        width: 80, height: 80, borderRadius: 12,
+        width: 100, height: 100, borderRadius: 12,
         backgroundColor: theme.colors.surfaceElevated,
     },
     thumbActions: { flexDirection: "row", gap: 6, marginTop: 4 },

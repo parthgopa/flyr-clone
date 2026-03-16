@@ -29,7 +29,9 @@ def _serialize_job_from_generation(job_id: str, generation: dict) -> dict:
     if original_product_url and stored_urls and stored_urls[0] == original_product_url:
         stored_urls = stored_urls[1:]
 
-    labels = metadata.get("scenarios") or metadata.get("model_labels") or []
+    # Get labels - for catalogue, use model_labels; for others, use scenarios
+    labels = metadata.get("model_labels") or metadata.get("scenarios") or []
+    
     images = []
     for idx, url in enumerate(stored_urls):
         label = labels[idx] if idx < len(labels) else f"Image {idx + 1}"
@@ -39,6 +41,8 @@ def _serialize_job_from_generation(job_id: str, generation: dict) -> dict:
             "label": label,
             "imageUrl": url,
         })
+    
+    print(f"[Job {job_id}] Serialized {len(images)} images from DB with labels: {labels[:3]}...")
 
     return {
         "jobId": job_id,
@@ -358,7 +362,7 @@ def generate_image_route():
     })
 
 
-def _run_catalogue_generation(job_id: str, category_id: str, model_images: list, product_image: str, model_labels: list, user_id: str = None):
+def _run_catalogue_generation(job_id: str, category_id: str, model_images: list, product_image: str, model_labels: list, user_id: str = None, bg_color: str = None, bg_label: str = "White"):
     """Background worker for catalogue: generates images with multiple model images."""
     job = jobs.get(job_id)
     if not job:
@@ -396,8 +400,8 @@ def _run_catalogue_generation(job_id: str, category_id: str, model_images: list,
         _persist_job_state(job_id, job)
 
         try:
-            # Generate highly accurate category-specific prompt
-            prompt = generate_catalogue_prompt(category_id, label)
+            # Generate highly accurate category-specific prompt with background
+            prompt = generate_catalogue_prompt(category_id, label, "", bg_color, bg_label)
             
             print(f"[Job {job_id}] Generated prompt for {category_id}: {label}")
             print(f"Prompt length: {len(prompt)} characters")
@@ -483,6 +487,8 @@ def generate_catalogue_route():
     model_images = data.get("modelImages", [])
     product_image = data.get("productImage")
     model_labels = data.get("modelLabels", [])
+    bg_color = data.get("backgroundColor")
+    bg_label = data.get("backgroundLabel", "White")
 
     if not product_image:
         return jsonify({"error": "Product image required"}), 400
@@ -554,7 +560,7 @@ def generate_catalogue_route():
     # Spawn background thread
     thread = threading.Thread(
         target=_run_catalogue_generation,
-        args=(job_id, category_id, model_images, product_image, model_labels, user_id),
+        args=(job_id, category_id, model_images, product_image, model_labels, user_id, bg_color, bg_label),
     )
     thread.daemon = True
     thread.start()

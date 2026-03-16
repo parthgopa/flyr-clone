@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function BrandingMainModelSelectionScreen({ navigation, route }: Props) {
-    const { categoryId } = route.params;
+    const { categoryId, showcaseItem } = route.params;
     const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
     const [models, setModels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -60,6 +60,7 @@ export default function BrandingMainModelSelectionScreen({ navigation, route }: 
             categoryId,
             modelId: selectedModelId,
             modelName: models.find((m) => m.id === selectedModelId)?.name,
+            showcaseItem,
         });
     };
 
@@ -125,6 +126,10 @@ export default function BrandingMainModelSelectionScreen({ navigation, route }: 
                     scrollEnabled={false}
                     columnWrapperStyle={styles.row}
                     contentContainerStyle={styles.grid}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={4}
+                    windowSize={5}
+                    initialNumToRender={4}
                 />
             </ScrollView>
 

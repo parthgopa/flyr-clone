@@ -1,5 +1,5 @@
 import { View, Image, StyleSheet, Alert, ScrollView, FlatList } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { Asset } from "expo-asset";
 import { imageUriToBase64 } from "../utils/imageToBase64";
@@ -14,12 +14,19 @@ import { theme } from "../theme/theme";
 import { startCatalogueGenerationJob } from "../services/api";
 
 export default function CatalogueUploadScreen({ navigation, route }: any) {
-  const { categoryId, selectedModels, modelName } = route.params;
+  const { categoryId, selectedModels, modelName, showcaseItem, selectedBackground } = route.params;
 
   const [productImage, setProductImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [creditsInfo, setCreditsInfo] = useState({ needed: 0, current: 0 });
+
+  // Pre-select showcase image if available (use first thumbnail's image_url)
+  useEffect(() => {
+    if (showcaseItem?.thumbnails?.[0]?.image_url && !productImage) {
+      setProductImage(showcaseItem.thumbnails[0].image_url);
+    }
+  }, [showcaseItem]);
 
   /* ---------------- IMAGE PICKERS ---------------- */
 
@@ -88,6 +95,8 @@ export default function CatalogueUploadScreen({ navigation, route }: any) {
         modelImages: validModelImages,
         productImage: productBase64,
         modelLabels: selectedModels.map((m: any) => m.label),
+        backgroundColor: selectedBackground?.color || null,
+        backgroundLabel: selectedBackground?.label || "White",
       };
 
       const res = await startCatalogueGenerationJob(payload);
@@ -129,6 +138,21 @@ export default function CatalogueUploadScreen({ navigation, route }: any) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* SELECTED BACKGROUND PREVIEW */}
+        {selectedBackground && (
+          <View style={styles.section}>
+            <AppText style={styles.label}>Selected Background</AppText>
+            <View style={styles.backgroundPreview}>
+              {selectedBackground.type === "color" ? (
+                <View style={[styles.bgColorPreview, { backgroundColor: selectedBackground.color }]} />
+              ) : (
+                <Image source={selectedBackground.image} style={styles.bgImagePreview} />
+              )}
+              <AppText style={styles.bgPreviewLabel}>{selectedBackground.label}</AppText>
+            </View>
+          </View>
+        )}
+
         {/* SELECTED MODEL PHOTOS PREVIEW */}
         <View style={styles.section}>
           <AppText style={styles.label}>
@@ -252,6 +276,35 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.surfaceElevated,
+  },
+  backgroundPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  bgColorPreview: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.sm,
+    marginRight: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  bgImagePreview: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.sm,
+    marginRight: theme.spacing.md,
+    resizeMode: "cover",
+  },
+  bgPreviewLabel: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: "500",
   },
   footer: {
     paddingHorizontal: theme.spacing.screenPadding,

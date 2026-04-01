@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Download, ExternalLink, Image as ImageIcon, Zap, TrendingUp, DollarSign } from 'lucide-react';
+import { Download, ExternalLink, Image as ImageIcon, Zap, TrendingUp, DollarSign, Coins, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usersAPI, dashboardAPI, getFullUrl } from '../services/api';
 import { formatDate, formatNumber, calculateCost, formatUSD, formatINR } from '../utils/helpers';
@@ -23,6 +23,10 @@ const UserDetail = () => {
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [creditsModalOpen, setCreditsModalOpen] = useState(false);
+  const [creditsToAdd, setCreditsToAdd] = useState('');
+  const [creditReason, setCreditReason] = useState('Admin bonus');
+  const [addingCredits, setAddingCredits] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -65,6 +69,27 @@ const UserDetail = () => {
       } catch (error) {
         toast.error('Failed to update status');
       }
+    }
+  };
+
+  const handleAddCredits = async () => {
+    if (!creditsToAdd || isNaN(creditsToAdd) || parseInt(creditsToAdd) <= 0) {
+      toast.error('Please enter a valid number of credits');
+      return;
+    }
+
+    setAddingCredits(true);
+    try {
+      const result = await usersAPI.addUserCredits(userId, parseInt(creditsToAdd), creditReason);
+      toast.success(`Successfully added ${result.credits_added} credits!`);
+      setCreditsModalOpen(false);
+      setCreditsToAdd('');
+      setCreditReason('Admin bonus');
+      loadData(); // Reload user data to show updated credits
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to add credits');
+    } finally {
+      setAddingCredits(false);
     }
   };
 
@@ -144,9 +169,21 @@ const UserDetail = () => {
         </Card>
       </motion.div>
 
-      {/* Generation Stats */}
-      <h2 className="section-title">Generation Stats</h2>
+      {/* Credits Section */}
+      <h2 className="section-title">Credits & Stats</h2>
       <div className="stats-grid-new">
+        <motion.div variants={itemVariants}>
+          <Card className="stat-card-new-detail" hoverable onClick={() => setCreditsModalOpen(true)} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon-wrapper" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+              <Coins size={24} color="#3B82F6" />
+            </div>
+            <div className="stat-value-new-detail">{user.credits || 0}</div>
+            <div className="stat-label-new-detail">Available Credits</div>
+            <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+              <Plus size={14} /> Add Credits
+            </div>
+          </Card>
+        </motion.div>
         <motion.div variants={itemVariants}>
           <Card className="stat-card-new-detail" hoverable>
             <div className="stat-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.1)' }}>
@@ -318,6 +355,93 @@ const UserDetail = () => {
             </Button>
             <Button variant="secondary" icon={<ExternalLink size={18} />} onClick={() => window.open(selectedImage, '_blank')}>
               Open in New Tab
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Credits Modal */}
+      <Modal isOpen={creditsModalOpen} onClose={() => setCreditsModalOpen(false)} title="Add Credits to User" size="md">
+        <div className="credits-modal">
+          <div className="current-credits-display">
+            <Coins size={32} color="#3B82F6" />
+            <div>
+              <div style={{ fontSize: '14px', color: 'var(--color-secondary)' }}>Current Balance</div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-primary)' }}>{user.credits || 0} Credits</div>
+            </div>
+          </div>
+          
+          <div className="form-group" style={{ marginTop: '24px' }}>
+            <label htmlFor="credits-input" style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Credits to Add</label>
+            <input
+              id="credits-input"
+              type="number"
+              min="1"
+              value={creditsToAdd}
+              onChange={(e) => setCreditsToAdd(e.target.value)}
+              placeholder="Enter number of credits"
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                fontSize: '16px',
+                backgroundColor: 'var(--color-surface)',
+                color: 'var(--color-primary)'
+              }}
+            />
+          </div>
+
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label htmlFor="reason-input" style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Reason (Optional)</label>
+            <input
+              id="reason-input"
+              type="text"
+              value={creditReason}
+              onChange={(e) => setCreditReason(e.target.value)}
+              placeholder="e.g., Admin bonus, Promotion, etc."
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                fontSize: '16px',
+                backgroundColor: 'var(--color-surface)',
+                color: 'var(--color-primary)'
+              }}
+            />
+          </div>
+
+          {creditsToAdd && parseInt(creditsToAdd) > 0 && (
+            <div className="preview-box" style={{
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              <div style={{ fontSize: '14px', color: 'var(--color-secondary)', marginBottom: '8px' }}>Preview:</div>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: '#3B82F6' }}>
+                {user.credits || 0} + {creditsToAdd} = {(user.credits || 0) + parseInt(creditsToAdd)} Credits
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+            <Button
+              onClick={handleAddCredits}
+              disabled={addingCredits || !creditsToAdd || parseInt(creditsToAdd) <= 0}
+              style={{ flex: 1 }}
+            >
+              {addingCredits ? 'Adding...' : 'Add Credits'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setCreditsModalOpen(false)}
+              disabled={addingCredits}
+              style={{ flex: 1 }}
+            >
+              Cancel
             </Button>
           </div>
         </div>

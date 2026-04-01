@@ -1,5 +1,5 @@
 // Backend API Configuration
-// export const API_BASE_URL = 'http://192.168.1.6:5000';
+// export const API_BASE_URL = 'http://192.168.31.55:5000';
 export const API_BASE_URL = 'http://72.62.79.188:8001';
 
 
@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
   USER_DETAIL: (userId) => `/admin/users/${userId}`,
   USER_GENERATIONS: (userId) => `/admin/users/${userId}/generations`,
   UPDATE_USER_STATUS: (userId) => `/admin/users/${userId}/status`,
+  ADD_USER_CREDITS: (userId) => `/admin/users/${userId}/credits`,
   
   // Token Stats
   TOKEN_STATS: '/admin/token-stats',

@@ -157,6 +157,7 @@ def get_user_detail(user_id):
             {"$match": {"user_id": ObjectId(user_id)}},
             {"$group": {
                 "_id": None,
+                "credits": {"$sum": "$credits"},
                 "total_generations": {"$sum": 1},
                 "total_images": {"$sum": "$metadata.total_images"},
                 "total_input_tokens": {"$sum": "$metadata.total_tokens.input_tokens"},
@@ -183,6 +184,7 @@ def get_user_detail(user_id):
                 "status": user.get("status", "active"),
                 "role": user.get("role", "user"),
                 "profile_picture": user.get("profile_picture"),
+                "credits": user.get("credits", 0),
                 "created_at": user.get("created_at", "").isoformat() if user.get("created_at") else None,
                 "updated_at": user.get("updated_at", "").isoformat() if user.get("updated_at") else None,
             },
@@ -432,3 +434,54 @@ def update_settings():
     except Exception as e:
         print(f"Admin update settings error: {e}")
         return jsonify({"error": "Failed to update settings"}), 500
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  CREDITS MANAGEMENT
+# ═════════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route("/users/<user_id>/credits", methods=["POST"])
+@require_admin
+def add_user_credits(user_id):
+    """
+    Add credits to a user account.
+    Body: { "credits": 100, "reason": "Admin bonus" }
+    """
+    try:
+        data = request.json
+        credits_to_add = data.get("credits", 0)
+        reason = data.get("reason", "admin_credit_addition")
+        
+        if not isinstance(credits_to_add, (int, float)) or credits_to_add <= 0:
+            return jsonify({"error": "Credits must be a positive number"}), 400
+        
+        # Add credits to user
+        from models.user import User
+        result = User.add_credits(user_id, int(credits_to_add), reason=reason)
+        
+        if not result:
+            return jsonify({"error": "Failed to add credits"}), 500
+        
+        # Get updated user info
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        new_credits = user.get("credits", 0)
+        
+        print(f"✓ Admin added {credits_to_add} credits to user {user_id}")
+        print(f"  New balance: {new_credits}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Successfully added {credits_to_add} credits",
+            "credits_added": int(credits_to_add),
+            "total_credits": new_credits,
+            "reason": reason
+        }), 200
+        
+    except Exception as e:
+        print(f"Admin add credits error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Failed to add credits"}), 500

@@ -49,7 +49,7 @@ IMPORTANT INSTRUCTIONS:
 
     try:
         response = client.models.generate_content(
-            model="nano-banana-pro-preview",
+            model="gemini-2.5-flash-image",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE", "TEXT"],
@@ -225,7 +225,7 @@ CRITICAL RULES:
 
     try:
         response = client.models.generate_content(
-            model="nano-banana-pro-preview",
+            model="gemini-2.5-flash-image",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE", "TEXT"],

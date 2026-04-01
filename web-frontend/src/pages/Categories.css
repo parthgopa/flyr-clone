@@ -79,11 +79,36 @@
   font-weight: 600;
   color: var(--color-secondary);
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cat-stat-badge.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: rgb(34, 197, 94);
+}
+
+.cat-stat-badge.status-inactive {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: rgb(239, 68, 68);
 }
 
 .cat-card:hover .cat-stat-badge {
   border-color: var(--color-accent);
   color: var(--color-accent);
+}
+
+.cat-card:hover .cat-stat-badge.status-active {
+  border-color: rgba(34, 197, 94, 0.5);
+  color: rgb(34, 197, 94);
+}
+
+.cat-card:hover .cat-stat-badge.status-inactive {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: rgb(239, 68, 68);
 }
 
 .cat-card-actions {
@@ -569,4 +594,89 @@
   font-size: 16px;
   font-weight: 500;
   margin: 0;
+}
+
+/* Toggle Switch Styles */
+.form-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.form-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgb(34, 197, 94);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.toggle-status {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  min-width: 70px;
+  text-align: center;
+}
+
+.toggle-status.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgb(34, 197, 94);
+}
+
+.toggle-status.status-inactive {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
 }

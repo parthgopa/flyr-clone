@@ -12,7 +12,7 @@ const PRODUCT_SKUS = [
 ];
 
 // Package name (update this with your actual package name)
-const PACKAGE_NAME = 'com.anonymous.flyrclone';
+const PACKAGE_NAME = 'com.anonymous.flyrclonetest';
 
 // Initialize IAP connection
 export const initializeIAP = async (): Promise<boolean> => {

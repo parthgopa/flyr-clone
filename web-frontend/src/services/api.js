@@ -89,6 +89,11 @@ export const usersAPI = {
     const response = await api.put(API_ENDPOINTS.UPDATE_USER_STATUS(userId), { status });
     return response.data;
   },
+  
+  addUserCredits: async (userId, credits, reason = 'Admin credit addition') => {
+    const response = await api.post(API_ENDPOINTS.ADD_USER_CREDITS(userId), { credits, reason });
+    return response.data;
+  },
 };
 
 // Token Stats API

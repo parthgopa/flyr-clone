@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, ChevronDown, ChevronUp, Pencil, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Pencil, Trash2, X, Image as ImageIcon, Power } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as Icons from 'react-icons/io5';
 import { contentAPI, getFullUrl } from '../services/api';
@@ -33,6 +33,7 @@ const Categories = () => {
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState('diamond');
   const [order, setOrder] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [shootPrompt, setShootPrompt] = useState('');
   const [cataloguePrompt, setCataloguePrompt] = useState('');
   const [brandingPrompt, setBrandingPrompt] = useState('');
@@ -101,6 +102,7 @@ const Categories = () => {
     setTitle('');
     setIcon('IoDiamond');
     setOrder(String(categories.length + 1));
+    setIsActive(true);
     setShootPrompt('');
     setCataloguePrompt('');
     setBrandingPrompt('');
@@ -122,6 +124,7 @@ const Categories = () => {
     setTitle(cat.title || '');
     setIcon(cat.icon || 'IoDiamond');
     setOrder(String(cat.order || 0));
+    setIsActive(cat.is_active !== undefined ? cat.is_active : true);
 
     const p = cat.prompts || {};
     setShootPrompt(p.shoot || '');
@@ -184,6 +187,7 @@ const Categories = () => {
         title: title,
         icon: icon,
         order: parseInt(order) || 0,
+        is_active: isActive,
         subcategories: ['photoshoot', 'catalogue', 'branding'],
         prompts: {
           shoot: shootPrompt,
@@ -300,6 +304,9 @@ const Categories = () => {
                       <h3 className="cat-card-title">{cat.title}</h3>
                       <p className="cat-card-subtitle">ID: {cat.category_id} • Order: {cat.order}</p>
                       <div className="cat-quick-stats">
+                        <span className={`cat-stat-badge ${cat.is_active ? 'status-active' : 'status-inactive'}`}>
+                          <Power size={12} /> {cat.is_active ? 'Active' : 'Inactive'}
+                        </span>
                         {items.photoshoot?.length > 0 && (
                           <span className="cat-stat-badge">📸 {items.photoshoot.length}</span>
                         )}
@@ -476,6 +483,26 @@ const Categories = () => {
                   <div className="cat-icon-circle">{renderIcon(icon)}</div>
                 </div>
                 <input className="form-input" type="number" placeholder="Order" value={order} onChange={(e) => setOrder(e.target.value)} />
+                
+                <div className="form-toggle-container">
+                  <div className="form-toggle-label">
+                    <Power size={18} />
+                    <span>Category Status</span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      checked={isActive} 
+                      onChange={(e) => setIsActive(e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                  <span className={`toggle-status ${isActive ? 'status-active' : 'status-inactive'}`}>
+                    {isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <p className="form-hint">Inactive categories will not be visible to users in the app</p>
+                
                 <p className="form-hint">Common icons: IoDiamond, IoShirt, IoWatch, IoRibbon, IoBag, IoGlasses, IoFootball, IoCar</p>
               </div>
             )}
